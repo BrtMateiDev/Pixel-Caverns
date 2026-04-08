@@ -28,7 +28,7 @@ if (!initGame()) {
 
 while (!WindowShouldClose()) {
 	BeginDrawing();
-	ClearBackground(RAYWHITE);
+	ClearBackground(BLACK);
 	rlImGuiBegin();
 
 	#pragma region imgui_docking
@@ -43,11 +43,11 @@ while (!WindowShouldClose()) {
 	}
 
 	#pragma region imgui_windows
-		ImGui::Begin("test");
-
-		ImGui::ShowDemoWindow();
-
-		ImGui::End();
+		// ImGui::Begin("test");
+		//
+		// ImGui::ShowDemoWindow();
+		//
+		// ImGui::End();
 	#pragma endregion
 
 		rlImGuiEnd();

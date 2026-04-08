@@ -1,7 +1,6 @@
 /out
 bin/
 build/
-resources/crashLogs/
 
 /.vs
 .idea/
