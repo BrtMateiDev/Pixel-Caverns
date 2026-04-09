@@ -3,13 +3,12 @@
 #include <rlImGui.h>
 #include <iostream>
 #include "gameMain.h"
+#include <cassert>
 int main()
 {
-
 #if PRODUCTION_BUILD==1
 	SetTraceLogLevel(LOG_NONE); //disables raylib console output
 #endif
-
 #pragma region initializations
 	SetConfigFlags(FLAG_WINDOW_RESIZABLE);
 	InitWindow(800, 450, "Pixel Caverns");
