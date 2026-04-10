@@ -3,6 +3,8 @@
 #include <rlImGui.h>
 #include <iostream>
 #include "gameMain.h"
+#include "blocks.h"
+#include "gameMap.h"
 #include <cassert>
 int main()
 {
