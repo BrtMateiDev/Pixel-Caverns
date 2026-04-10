@@ -1,5 +1,1 @@
-Implemented the game map with:
-
--an asset manager and block header to store blocks (for now dirt and stone)
--gameMap functions that create the map and check blocks
--manually adding a few blocks and drawing them in gameMain
+Implemented camera movement, the current controls are the arrow keys.
