@@ -7,7 +7,7 @@
 struct Block {
     enum
     {
-        air = 0,
+        air,
         dirt,
         grassBlock,
         stone,
@@ -69,4 +69,4 @@ struct Block {
     std::uint16_t type=0; //each block will be represented by a 16-bit number
 };
 
-#endif //MYGAME_BLOCKS_H
+#endif

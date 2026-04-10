@@ -19,7 +19,7 @@ Block &GameMap::getBlockUnsafe(int x, int y) {
 };
 
 Block *GameMap::getBlockSafe(int x, int y) {
-    assert(mapData.size()==w*y && "The map hasn't been initialized!");
+    assert(mapData.size()==w*h && "The map hasn't been initialized!");
     if (x<0 || y< 0 || x>=w || y>=h) return nullptr;
 
     return &mapData[x+y*w];

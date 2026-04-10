@@ -1,10 +1,12 @@
 #include <raylib.h>
 #include <fstream>
-#include <cassert>
+#include <cmath>
 #include "gameMain.h"
 #include "assetManager.h"
 #include "gameMap.h"
 #include "helpers.h"
+
+std::uint16_t currentBlock=Block::gold;
 
 struct GameData {
     GameMap gameMap;
@@ -41,10 +43,40 @@ bool updateGame() {
     ClearBackground({75, 75, 150, 255});
 
 #pragma region camera movement
-    if (IsKeyDown(KEY_LEFT)) gameData.camera.target.x-=7.f*dt;
-    if (IsKeyDown(KEY_RIGHT)) gameData.camera.target.x+=7.f*dt;
-    if (IsKeyDown(KEY_UP)) gameData.camera.target.y-=7.f*dt;
-    if (IsKeyDown(KEY_DOWN)) gameData.camera.target.y+=7.f*dt;
+    float mouseWheel=GetMouseWheelMove();
+    if (mouseWheel>0 && gameData.camera.zoom<=200.f) gameData.camera.zoom+=10.f;
+    if (mouseWheel<0 && gameData.camera.zoom>10.f) gameData.camera.zoom-=10.f;
+
+    if (IsMouseButtonDown(MOUSE_BUTTON_MIDDLE)) {
+        Vector2 mouseDelta=GetMouseDelta();
+
+        //Note: The camera has to be moved in the opposite direction
+        gameData.camera.target.x-=mouseDelta.x/gameData.camera.zoom;
+        gameData.camera.target.y-=mouseDelta.y/gameData.camera.zoom;
+    }
+#pragma endregion
+
+#pragma region mouse actions
+    if (IsKeyPressed(KEY_ONE)) currentBlock=Block::dirt;
+    if (IsKeyPressed(KEY_TWO)) currentBlock=Block::stone;
+    if (IsKeyPressed(KEY_THREE)) currentBlock=Block::gold;
+
+    Vector2 worldPos=GetScreenToWorld2D(GetMousePosition(), gameData.camera);;
+
+    int blockX=(int)floor(worldPos.x);
+    int blockY=(int)floor(worldPos.y);
+
+    if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+        auto b=gameData.gameMap.getBlockSafe(blockX, blockY);
+        if (b) *b={};
+    }
+
+    if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
+        auto b=gameData.gameMap.getBlockSafe(blockX, blockY);
+        if (b) b->type=currentBlock;
+    }
+
+    if (IsMouseButtonDown)
 #pragma endregion
 
     BeginMode2D(gameData.camera);
@@ -64,6 +96,17 @@ bool updateGame() {
                 );
             }
         }
+
+#pragma region visualizing block selection
+    DrawTexturePro(
+        assetManager.frame,
+        {0, 0, (float)assetManager.frame.width, (float)assetManager.frame.height},
+        {(float)blockX, (float)blockY, 1, 1},
+        {0, 0},
+        0.f,
+        WHITE
+    );
+#pragma endregion
 
     EndMode2D();
 

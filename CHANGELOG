@@ -1,3 +1,4 @@
-IMPORTANT NOTE:
-I do not own these assets. They are a free preset which I will be using as a placeholder until I finish creating my own assets.
-For licensing, read the "license.txt" file in resources.
+Implemented:
+-block placement and breaking
+-the ability to change the selected block when placing (dirt=1, stone=2, gold=3)
+-camera zooming and panning by holding down the middle mouse button
