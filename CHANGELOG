@@ -1,4 +1,1 @@
-Implemented:
--block placement and breaking
--the ability to change the selected block when placing (dirt=1, stone=2, gold=3)
--camera zooming and panning by holding down the middle mouse button
+Optimized the game by only rendering what is on the screen instead of everything at once.

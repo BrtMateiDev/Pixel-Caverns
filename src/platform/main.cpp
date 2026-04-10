@@ -1,11 +1,8 @@
 #include <raylib.h>
 #include <imgui.h>
 #include <rlImGui.h>
-#include <iostream>
 #include "gameMain.h"
-#include "blocks.h"
-#include "gameMap.h"
-#include <cassert>
+
 int main()
 {
 #if PRODUCTION_BUILD==1
@@ -50,7 +47,6 @@ while (!WindowShouldClose()) {
 		//
 		// ImGui::End();
 	#pragma endregion
-
 		rlImGuiEnd();
 		EndDrawing();
 }
