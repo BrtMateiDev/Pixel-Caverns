@@ -1,1 +1,3 @@
-Optimized the game by only rendering what is on the screen instead of everything at once.
+Implemented:
+- Pseudo-rng number generator functions (randomStuff.h)
+- Basic world generation

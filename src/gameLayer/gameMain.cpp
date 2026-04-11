@@ -6,6 +6,7 @@
 #include "assetManager.h"
 #include "gameMap.h"
 #include "helpers.h"
+#include "worldGenerator.h"
 
 std::uint16_t currentBlock=Block::gold;
 
@@ -19,14 +20,7 @@ AssetManager assetManager;
 bool initGame() {
     assetManager.loadAll();
 
-    gameData.gameMap.create(500, 500);
-
-    gameData.gameMap.getBlockUnsafe(0,0).type=Block::dirt;
-    gameData.gameMap.getBlockUnsafe(1,1).type=Block::grass;
-    gameData.gameMap.getBlockUnsafe(2,2).type=Block::goldBlock;
-    gameData.gameMap.getBlockUnsafe(3,3).type=Block::glass;
-    gameData.gameMap.getBlockUnsafe(4,4).type=Block::platform;
-
+    generateWorld(gameData.gameMap, 1);
 
     gameData.camera.target={0.0};
     gameData.camera.rotation=0.0f;

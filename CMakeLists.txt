@@ -31,7 +31,11 @@ add_executable("${CMAKE_PROJECT_NAME}"
 		src/gameLayer/gameMap.h
 		src/gameLayer/gameMap.cpp
 		src/gameLayer/helpers.h
-		src/gameLayer/helpers.cpp)
+		src/gameLayer/helpers.cpp
+		src/gameLayer/randomStuff.h
+		src/gameLayer/randomStuff.cpp
+		src/gameLayer/worldGenerator.h
+		src/gameLayer/worldGenerator.cpp)
 
 set_property(TARGET "${CMAKE_PROJECT_NAME}" PROPERTY CXX_STANDARD 17)
 
