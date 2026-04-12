@@ -1,10 +1,5 @@
-Implemented:
-- Collision handling *
-- Drawing the player sprite and visualizing the hitbox
-
-* This commit adds a lot of code compared to previous commits, mainly in the physics.h and .cpp files.
-There is a lot of physics involved, but fortunately, most of the complicated steps are explained in comments in those files.
-
-//NOTE: I just realized there's an ugly rendering bug when zooming in. I'm not sure what's causing it, but the most likely reason is numerical imprecision.
-This will be properly fixed in later commits.
+Changes:
+Fixed a major bug in gameMain.cpp at the "camera view borders" section.
+I've made multiple typos in calculating the coordinates of the cameras, which resulted in not only undefined behavior, but also severe performance drops.
+The game runs smoothly now :).
 
