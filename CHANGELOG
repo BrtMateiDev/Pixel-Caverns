@@ -1,3 +1,3 @@
 Implemented:
-- Pseudo-rng number generator functions (randomStuff.h)
-- Basic world generation
+- AABB (Axis Aligned Bounding Box) -> physics.h
+- Hitbox collision testing in gameMain.cpp (near the end of updateGame)

@@ -7,6 +7,7 @@
 #include "gameMap.h"
 #include "helpers.h"
 #include "worldGenerator.h"
+#include "physics.h"
 
 std::uint16_t currentBlock=Block::gold;
 
@@ -22,7 +23,7 @@ bool initGame() {
 
     generateWorld(gameData.gameMap, 1);
 
-    gameData.camera.target={0.0};
+    gameData.camera.target={20.f, 120.f};
     gameData.camera.rotation=0.0f;
     gameData.camera.zoom=100.0f;
 
@@ -116,6 +117,43 @@ bool updateGame() {
         0.f,
         WHITE
     );
+#pragma endregion
+
+#pragma region testing collisions
+    //Notice: Remove the "/* */" comments to enable one test, but remember to disable the other
+
+    Transform2D test;
+    test.pos={20.5f, 120.5f}; //the position of the camera + 0.5 for the center
+    test.w=1;
+    test.h=1;
+
+    Transform2D test2;
+    test2.pos=worldPos;
+    test2.w=1;
+    test2.h=1;
+
+    /*
+    //TEST 1: CHECKING POINT COLLISION
+    //(the worldPos variable was calculated earlier for the mouse position)
+    if (test.intersectPoint(worldPos)) {
+        DrawRectangleLinesEx(test.getAABB(), 0.1, GREEN);
+    }
+    else {
+        DrawRectangleLinesEx(test.getAABB(), 0.1, BLUE);
+    }
+    */
+
+    //TEST2: CHECKING TRANSFORM COLLISION
+    if (test.intersectTransform(test2)) {
+        DrawRectangleLinesEx(test.getAABB(), 0.1, GREEN);
+        DrawRectangleLinesEx(test2.getAABB(), 0.1, GREEN);
+    }
+    else {
+        DrawRectangleLinesEx(test.getAABB(), 0.1, BLUE);
+        DrawRectangleLinesEx(test2.getAABB(), 0.1, RED);
+    }
+
+
 #pragma endregion
 
     EndMode2D();
