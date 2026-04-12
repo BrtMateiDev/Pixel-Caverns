@@ -143,7 +143,8 @@ bool updateGame() {
     }
     */
 
-    //TEST2: CHECKING TRANSFORM COLLISION
+    //TEST 2: CHECKING TRANSFORM COLLISION
+    /*
     if (test.intersectTransform(test2)) {
         DrawRectangleLinesEx(test.getAABB(), 0.1, GREEN);
         DrawRectangleLinesEx(test2.getAABB(), 0.1, GREEN);
@@ -152,7 +153,12 @@ bool updateGame() {
         DrawRectangleLinesEx(test.getAABB(), 0.1, BLUE);
         DrawRectangleLinesEx(test2.getAABB(), 0.1, RED);
     }
+    */
 
+    //TEST 3: VISUALIZING THE PLAYER REACH
+    if (Vector2Distance(test.pos, test2.pos)<=1.5f) DrawLineEx(test.pos, worldPos, 0.1, GREEN);
+    else DrawLineEx(test.pos, worldPos, 0.1, RED);
+    DrawCircleV(test.pos, 0.1, PURPLE);
 
 #pragma endregion
 
