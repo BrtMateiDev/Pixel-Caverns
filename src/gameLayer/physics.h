@@ -3,6 +3,86 @@
 
 #pragma once
 #include <raylib.h>
+#include <raymath.h>
+#include "gameMap.h"
+
+#pragma region Defining vector operations
+    //This is function overloading
+    //Note where I put "&" before "operator" and where I put "const" before the parameters
+    inline Vector2 operator+(const Vector2 &a, const Vector2 &b){
+        return {a.x + b.x, a.y + b.y};
+    }
+
+    inline Vector2 operator-(const Vector2 &a, const Vector2 &b){
+        return {a.x - b.x, a.y - b.y};
+    }
+
+    inline Vector2 operator*(const Vector2 &a, float scalar){
+        return {a.x * scalar, a.y * scalar};
+    }
+
+    inline Vector2 operator/(const Vector2 &a, float scalar){
+        return {a.x / scalar, a.y / scalar};
+    }
+
+
+    inline Vector2 &operator*=(Vector2 &a, float scalar){
+        a.x *= scalar;
+        a.y *= scalar;
+        return a;
+    }
+
+    inline Vector2 &operator/=(Vector2 &a, float scalar){
+        a.x /= scalar;
+        a.y /= scalar;
+        return a;
+    }
+
+    inline Vector2 &operator+=(Vector2 &a, float scalar){
+        a.x += scalar;
+        a.y += scalar;
+        return a;
+    }
+
+    inline Vector2 &operator-=(Vector2 &a, float scalar){
+        a.x -= scalar;
+        a.y -= scalar;
+        return a;
+    }
+
+
+    inline bool operator==(const Vector2 &a, const Vector2 &b){
+        return a.x == b.x && a.y == b.y;
+    }
+
+    inline bool operator!=(const Vector2 &a, const Vector2 &b){
+        return !(a == b);
+    }
+
+    inline Vector2 &operator+=(Vector2 &a, const Vector2 &b){
+        a.x += b.x;
+        a.y += b.y;
+        return a;
+    }
+
+    inline Vector2 &operator-=(Vector2 &a, const Vector2 &b){
+        a.x -= b.x;
+        a.y -= b.y;
+        return a;
+    }
+
+    inline Vector2 &operator*=(Vector2 &a, const Vector2 &b){
+        a.x *= b.x;
+        a.y *= b.y;
+        return a;
+    }
+
+    inline Vector2 &operator/=(Vector2 &a, const Vector2 &b){
+        a.x /= b.x;
+        a.y /= b.y;
+        return a;
+    }
+#pragma endregion
 
 struct Transform2D {
     Vector2 pos={}; //center
@@ -54,5 +134,62 @@ struct Transform2D {
 
         return CheckCollisionRecs(a, b);
     }
+};
+
+//This is a forward reference for using the address of mapData
+struct GameMap;
+
+struct PhysicalEntity {
+    Transform2D transform;
+    Vector2 lastPosition={}; //needed for calculating the direction vector
+
+    Vector2 velocity={};
+    Vector2 acceleration={};
+
+    bool upTouch=0;
+    bool downTouch=0;
+    bool leftTouch=0;
+    bool rightTouch=0;
+
+    void teleport(Vector2 pos) {
+        //If the last position wouldn't be reset, then the "resolveConstraints" function
+            //would flag it as a lag spike and teleport back
+        transform.pos=pos;
+        lastPosition=pos;
+    }
+
+    void updateForces(float dt) {
+        //Notice how useful the vector operations are!
+        velocity+=acceleration*dt;
+        transform.pos+=velocity*dt;
+
+        //Below is calculating the drag formula in physics, note the use of "abs" to keep the sign when squaring
+        Vector2 dragVector=Vector2{velocity.x*std::abs(velocity.x), velocity.y*std::abs(velocity.y)};
+        float drag=0.01f; //arbitrary value which represents the 1/2*density*friction*area part of the formula (because they are constant)
+
+        //This prevents a bug where your character starts vibrating when moving very little
+        if (Vector2Length(dragVector)*drag*dt>Vector2Length(velocity)) velocity={};
+        else velocity-=dragVector*drag*dt;
+
+        if (Vector2Length(velocity)<0.01) velocity={};
+        acceleration={};
+
+        //Last note: These formulas can be improved, but for now they're good enough.
+    }
+
+    void applyGravity() {
+        acceleration+={0, 20.f}; //arbitrary value
+    }
+
+    //called at the end of the frame
+    void updateFinal() {
+        lastPosition={transform.pos.x, transform.pos.y};
+    }
+
+    void resolveConstraints(GameMap &mapData); //edge cases
+
+    void checkCollisionOnce(Vector2 &pos, GameMap &mapData);
+
+    Vector2 performCollisionOnOneAxis(GameMap &mapData, Vector2 pos, Vector2 delta);
 };
 #endif

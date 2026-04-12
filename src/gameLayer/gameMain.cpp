@@ -9,11 +9,16 @@
 #include "worldGenerator.h"
 #include "physics.h"
 
-std::uint16_t currentBlock=Block::gold;
-
 struct GameData {
     GameMap gameMap;
-    Camera2D camera;
+    Camera2D camera={};
+
+    int creativeSelectedBlock=Block::dirt;
+
+    Vector2 selectionStart={};
+    Vector2 selectionEnd={};
+
+    PhysicalEntity player;
 }gameData;
 
 AssetManager assetManager;
@@ -27,6 +32,10 @@ bool initGame() {
     gameData.camera.rotation=0.0f;
     gameData.camera.zoom=100.0f;
 
+    gameData.player.teleport({20, 0});
+    gameData.player.transform.w=0.9f;
+    gameData.player.transform.h=1.8f;
+
     return true;
 }
 
@@ -38,11 +47,33 @@ bool updateGame() {
 
     ClearBackground({75, 75, 150, 255});
 
+#pragma region player movement
+    static float CAMERA_SPEED=10;
+    if (IsKeyDown(KEY_W)) gameData.player.transform.pos.y-=CAMERA_SPEED*dt;
+    if (IsKeyDown(KEY_A)) gameData.player.transform.pos.x-=CAMERA_SPEED*dt;
+    if (IsKeyDown(KEY_S)) gameData.player.transform.pos.y+=CAMERA_SPEED*dt;
+    if (IsKeyDown(KEY_D)) gameData.player.transform.pos.x+=CAMERA_SPEED*dt;
+#pragma endregion
+
+#pragma region entities
+    //gameData.player.applyGravity();
+
+    gameData.player.updateForces(dt);
+
+    gameData.player.checkCollisionOnce(gameData.player.transform.pos, gameData.gameMap);
+
+    gameData.camera.target=gameData.player.transform.pos;
+
+    gameData.player.updateFinal();
+#pragma endregion
+
 #pragma region camera movement
     float mouseWheel=GetMouseWheelMove();
     if (mouseWheel>0 && gameData.camera.zoom<=200.f) gameData.camera.zoom+=10.f;
     if (mouseWheel<0 && gameData.camera.zoom>10.f) gameData.camera.zoom-=10.f;
 
+    /*
+    == DISABLED ==
     if (IsMouseButtonDown(MOUSE_BUTTON_MIDDLE)) {
         Vector2 mouseDelta=GetMouseDelta();
 
@@ -50,17 +81,18 @@ bool updateGame() {
         gameData.camera.target.x-=mouseDelta.x/gameData.camera.zoom;
         gameData.camera.target.y-=mouseDelta.y/gameData.camera.zoom;
     }
+    */
 #pragma endregion
 
-#pragma region mouse actions
-    if (IsKeyPressed(KEY_ONE)) currentBlock=Block::dirt;
-    if (IsKeyPressed(KEY_TWO)) currentBlock=Block::stone;
-    if (IsKeyPressed(KEY_THREE)) currentBlock=Block::gold;
-
+#pragma region mouse and keyboard actions
+    if (IsKeyPressed(KEY_MINUS)) gameData.creativeSelectedBlock-=1;
+    if (IsKeyPressed(KEY_EQUAL)) gameData.creativeSelectedBlock+=1;
+    if (gameData.creativeSelectedBlock<1) gameData.creativeSelectedBlock=1;
+    if (gameData.creativeSelectedBlock>Block::BLOCKS_COUNT-1) gameData.creativeSelectedBlock=Block::BLOCKS_COUNT-1;
     Vector2 worldPos=GetScreenToWorld2D(GetMousePosition(), gameData.camera);;
 
-    int blockX=(int)floor(worldPos.x);
-    int blockY=(int)floor(worldPos.y);
+    int blockX=floor(worldPos.x);
+    int blockY=floor(worldPos.y);
 
     if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
         auto b=gameData.gameMap.getBlockSafe(blockX, blockY);
@@ -69,10 +101,8 @@ bool updateGame() {
 
     if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
         auto b=gameData.gameMap.getBlockSafe(blockX, blockY);
-        if (b) b->type=currentBlock;
+        if (b) b->type=gameData.creativeSelectedBlock;
     }
-
-    if (IsMouseButtonDown)
 #pragma endregion
 
     BeginMode2D(gameData.camera);
@@ -92,6 +122,7 @@ bool updateGame() {
     endYView=Clamp(endYView, 0, gameData.gameMap.h-1);
 #pragma endregion
 
+    //Drawing the map
     for (int y=startYView; y<=endXView; ++y)
         for (int x=startXView; x<=endXView; ++x) {
             auto &b=gameData.gameMap.getBlockUnsafe(x,y);
@@ -108,6 +139,26 @@ bool updateGame() {
             }
         }
 
+    //Drawing the player
+    Transform2D playerSprite=gameData.player.transform;
+
+    playerSprite.w=1;
+    playerSprite.h=2;
+    //Moving the sprite so that the bottom of it matches the bottom of the hitbox
+    playerSprite.pos.y-=(playerSprite.h-gameData.player.transform.h)/2;
+
+    DrawTexturePro(
+        assetManager.player,
+        {0, 0, (float)assetManager.player.width, (float)assetManager.player.height},
+        playerSprite.getAABB(),
+        {0, 0},
+        0.0f,
+        WHITE
+    );
+
+    //Drawing the player's hitbox
+    DrawRectangleLinesEx(gameData.player.transform.getAABB(), 0.1, {20, 101, 250, 120});
+
 #pragma region visualizing block selection
     DrawTexturePro(
         assetManager.frame,
@@ -120,8 +171,10 @@ bool updateGame() {
 #pragma endregion
 
 #pragma region testing collisions
+    // == DISABLED==
     //Notice: Remove the "/* */" comments to enable one test, but remember to disable the other
 
+    /*
     Transform2D test;
     test.pos={20.5f, 120.5f}; //the position of the camera + 0.5 for the center
     test.w=1;
@@ -131,9 +184,10 @@ bool updateGame() {
     test2.pos=worldPos;
     test2.w=1;
     test2.h=1;
+    */
 
-    /*
     //TEST 1: CHECKING POINT COLLISION
+    /*
     //(the worldPos variable was calculated earlier for the mouse position)
     if (test.intersectPoint(worldPos)) {
         DrawRectangleLinesEx(test.getAABB(), 0.1, GREEN);
@@ -156,9 +210,11 @@ bool updateGame() {
     */
 
     //TEST 3: VISUALIZING THE PLAYER REACH
+    /*
     if (Vector2Distance(test.pos, test2.pos)<=1.5f) DrawLineEx(test.pos, worldPos, 0.1, GREEN);
     else DrawLineEx(test.pos, worldPos, 0.1, RED);
     DrawCircleV(test.pos, 0.1, PURPLE);
+    */
 
 #pragma endregion
 

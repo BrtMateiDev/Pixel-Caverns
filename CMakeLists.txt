@@ -37,6 +37,7 @@ add_executable("${CMAKE_PROJECT_NAME}"
 		src/gameLayer/worldGenerator.h
 		src/gameLayer/worldGenerator.cpp
 		src/gameLayer/physics.h
+		src/gameLayer/physics.cpp
 )
 
 set_property(TARGET "${CMAKE_PROJECT_NAME}" PROPERTY CXX_STANDARD 17)
