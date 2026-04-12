@@ -112,19 +112,19 @@ bool updateGame() {
     Vector2 bottomRightView=GetScreenToWorld2D({(float)GetScreenWidth(), (float)GetScreenHeight()}, gameData.camera);
 
     int startXView = (int)floorf(topLeftView.x-1);
-    int endXView = (int)floorf(bottomRightView.x+1);
+    int endXView = (int)ceilf(bottomRightView.x+1);
     int startYView = (int)floorf(topLeftView.y-1);
-    int endYView = (int)floorf(bottomRightView.y+1);
+    int endYView = (int)ceilf(bottomRightView.y+1);
 
     startXView=Clamp(startXView, 0, (float)gameData.gameMap.w-1); //Clamp means the variable can't have a value outside those bounds
-    endXView=Clamp(endXView, (float)GetScreenWidth(), (float)gameData.gameMap.w-1);
+    endXView=Clamp(endXView, 0, (float)gameData.gameMap.w-1);
     startYView=Clamp(startYView, 0, (float)gameData.gameMap.h-1);
     endYView=Clamp(endYView, 0, (float)gameData.gameMap.h-1);
 #pragma endregion
 
     //Drawing the map
-    for (int y=startYView; y<=endYView; y++)
-        for (int x=startXView; x<=endXView; x++) {
+    for (int y=startYView; y<=endYView; ++y)
+        for (int x=startXView; x<=endXView; ++x) {
             auto &b=gameData.gameMap.getBlockUnsafe(x,y);
             if (b.type!=Block::air) {
 

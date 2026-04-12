@@ -1,5 +1,2 @@
 Changes:
-Fixed a major bug in gameMain.cpp at the "camera view borders" section.
-I've made multiple typos in calculating the coordinates of the cameras, which resulted in not only undefined behavior, but also severe performance drops.
-The game runs smoothly now :).
-
+Nevermind there were still three more typos (╥﹏╥), but it's all good now!
