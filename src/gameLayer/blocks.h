@@ -63,7 +63,6 @@ struct Block {
         bonePlatform,
 
         BLOCKS_COUNT,
-
     };
 
     std::uint16_t type=0; //each block will be represented by a 16-bit number

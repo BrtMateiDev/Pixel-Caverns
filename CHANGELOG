@@ -1,3 +1,2 @@
 Changes:
-- Added jumping (no more flying freely)
-- Gave the slime some basic AI (finite-state machine), check "slime.cpp"
+- Reformatted the code for easier readability
