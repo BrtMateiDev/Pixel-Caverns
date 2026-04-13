@@ -20,7 +20,7 @@ void Slime::render(AssetManager &assetManager) {
 void Slime::update(float dt, std::ranlux24_base rng, Vector2 playerPosition) {
     changeStateTimer -= dt;
     if (changeStateTimer < 0) {
-        changeStateTimer = getRandomFloat(rng, 1, 7);
+        changeStateTimer = getRandomFloat(rng, 1, 6); //think of this as the attention span
 
         float distanceToPlayer = Vector2Distance(playerPosition, getPosition());
         if (distanceToPlayer < 20) {
@@ -38,19 +38,19 @@ void Slime::update(float dt, std::ranlux24_base rng, Vector2 playerPosition) {
     switch (currentState) {
         case STATE_WANDERING:
             if (jumpTimer < 0) {
-                jumpTimer = getRandomFloat(rng, 2, 6);
+                jumpTimer = getRandomFloat(rng, 2, 5);
                 physics.jump(10);
-                moveSpeed = getRandomFloat(rng, -8, 8);
+                moveSpeed = getRandomFloat(rng, -4, 4);
             }
             break;
 
         case STATE_CHASING:
             if (jumpTimer < 0) {
-                jumpTimer = getRandomFloat(rng, 1, 1.5);
+                jumpTimer = getRandomFloat(rng, 1, 2);
                 physics.jump(10);
                 if (playerPosition.x > getPosition().x)
-                    moveSpeed = getRandomFloat(rng, 5, 8);
-                else moveSpeed = -getRandomFloat(rng, 5, 8); //notice the minus
+                    moveSpeed = getRandomFloat(rng, 4, 7);
+                else moveSpeed = -getRandomFloat(rng, 4, 7); //notice the minus
             }
             break;
 

@@ -1,2 +1,3 @@
 Changes:
-- Added slime animations, check "entityAnimation.h"
+- Refactored the code so that entities are stored using IDs, check the new "entityIdHolder" files
+- Overhauled some controls and moved them to an ImGui window

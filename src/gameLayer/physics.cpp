@@ -41,7 +41,10 @@ end:
     //Restrict the player from going outside of bounds/falling through the map
     if (pos.x - transform.w / 2 < 0) pos.x = transform.w / 2;
     if (pos.x + transform.w / 2 > mapData.w) pos.x = mapData.w - transform.w / 2;
-    if (pos.y + transform.h / 2 > mapData.h) pos.y = mapData.h - transform.h / 2;
+    if (pos.y + transform.h / 2 > mapData.h) {
+        pos.y = mapData.h - transform.h / 2;
+        downTouch = true; //experimental
+    }
 
     //Prevention for gaining velocity when standing on a block
     if (leftTouch && velocity.x < 0) velocity.x = 0;

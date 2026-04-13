@@ -1,5 +1,6 @@
 #include <raylib.h>
 #include <raymath.h>
+#include <imgui.h>
 #include <fstream>
 #include <cmath>
 #include "gameMain.h"
@@ -8,7 +9,10 @@
 #include "helpers.h"
 #include "worldGenerator.h"
 #include "physics.h"
-#include "Entities/slime.h"
+#include "entities/slime.h"
+#include "entityIdHolder.h"
+
+bool showImGui = true;
 
 struct GameData {
     GameMap gameMap;
@@ -21,10 +25,18 @@ struct GameData {
 
     PhysicalEntity player;
 
-    Slime slime;
+    EntityHolder entities;
 } gameData;
 
 AssetManager assetManager;
+
+//quick function for spawning
+void spawnSlime(Vector2 position) {
+    Slime slime;
+    slime.physics.teleport(position);
+    auto id = gameData.entities.idHolder.getEntityIdAndIncrement();
+    gameData.entities.entities[id] = slime;
+}
 
 bool initGame() {
     assetManager.loadAll();
@@ -39,8 +51,6 @@ bool initGame() {
     gameData.player.transform.w = 0.9f;
     gameData.player.transform.h = 1.8f;
 
-    gameData.slime.physics.teleport({40, 0});
-
     return true;
 }
 
@@ -54,11 +64,11 @@ bool updateGame() {
     ClearBackground({75, 75, 150, 255});
 
 #pragma region player movement
-    static float CAMERA_SPEED = 10;
-    if (IsKeyDown(KEY_W)) gameData.player.transform.pos.y -= CAMERA_SPEED * dt;
-    if (IsKeyDown(KEY_A)) gameData.player.transform.pos.x -= CAMERA_SPEED * dt;
-    if (IsKeyDown(KEY_S)) gameData.player.transform.pos.y += CAMERA_SPEED * dt;
-    if (IsKeyDown(KEY_D)) gameData.player.transform.pos.x += CAMERA_SPEED * dt;
+    static float PLAYER_SPEED = 10;
+    if (IsKeyDown(KEY_W)) gameData.player.transform.pos.y -= PLAYER_SPEED * dt;
+    if (IsKeyDown(KEY_A)) gameData.player.transform.pos.x -= PLAYER_SPEED * dt;
+    if (IsKeyDown(KEY_S)) gameData.player.transform.pos.y += PLAYER_SPEED * dt;
+    if (IsKeyDown(KEY_D)) gameData.player.transform.pos.x += PLAYER_SPEED * dt;
 
     if (IsKeyDown(KEY_SPACE)) gameData.player.jump(10);
 #pragma endregion
@@ -71,47 +81,40 @@ bool updateGame() {
     gameData.camera.target = gameData.player.transform.pos;
     gameData.player.updateFinal();
 
-    //slime
+    //entities
     std::ranlux24_base rng(std::random_device{}());
-    gameData.slime.update(dt, rng, gameData.player.getPosition());
-    gameData.slime.physics.applyGravity();
-    gameData.slime.physics.updateForces(dt);
-    gameData.slime.physics.resolveConstraints(gameData.gameMap);
-    gameData.slime.physics.updateFinal();
-#pragma endregion
 
-#pragma region camera movement
-    float mouseWheel = GetMouseWheelMove();
-    if (mouseWheel > 0 && gameData.camera.zoom <= 200.f) gameData.camera.zoom += 10.f;
-    if (mouseWheel < 0 && gameData.camera.zoom > 10.f) gameData.camera.zoom -= 10.f;
+    for (auto &e: gameData.entities.entities) {
+        //"second" means the entity name
+        e.second.update(dt, rng, gameData.player.getPosition());
 
-    /*
-    == DISABLED ==
-    if (IsMouseButtonDown(MOUSE_BUTTON_MIDDLE)) {
-        Vector2 mouseDelta=GetMouseDelta();
-
-        //Note: The camera has to be moved in the opposite direction
-        gameData.camera.target.x-=mouseDelta.x/gameData.camera.zoom;
-        gameData.camera.target.y-=mouseDelta.y/gameData.camera.zoom;
+        e.second.physics.applyGravity();
+        e.second.physics.updateForces(dt);
+        e.second.physics.resolveConstraints(gameData.gameMap);
+        e.second.physics.updateFinal();
     }
-    */
 #pragma endregion
 
 #pragma region mouse and keyboard actions
-    if (IsKeyPressed(KEY_MINUS)) gameData.creativeSelectedBlock -= 1;
-    if (IsKeyPressed(KEY_EQUAL)) gameData.creativeSelectedBlock += 1;
-    if (gameData.creativeSelectedBlock < 1) gameData.creativeSelectedBlock = 1;
-    if (gameData.creativeSelectedBlock > Block::BLOCKS_COUNT - 1)
-        gameData.creativeSelectedBlock = Block::BLOCKS_COUNT - 1;
+    if (IsKeyPressed(KEY_MINUS)) {
+        gameData.creativeSelectedBlock--;
+        if (gameData.creativeSelectedBlock <= 0) gameData.creativeSelectedBlock = Block::BLOCKS_COUNT - 1;
+    }
+    if (IsKeyPressed(KEY_EQUAL)) {
+        gameData.creativeSelectedBlock++;
+        if (gameData.creativeSelectedBlock >= Block::BLOCKS_COUNT) gameData.creativeSelectedBlock = 1;
+    }
+    if (IsKeyPressed(KEY_SEVEN)) showImGui = !showImGui;
+
     Vector2 worldPos = GetScreenToWorld2D(GetMousePosition(), gameData.camera);;
 
     int blockX = floor(worldPos.x);
     int blockY = floor(worldPos.y);
 
-    if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+    if (!showImGui && IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
         auto b = gameData.gameMap.getBlockSafe(blockX, blockY);
         if (b) *b = {};
-    }
+    } //checking ImGui so that you can't break blocks when moving the window
 
     if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
         auto b = gameData.gameMap.getBlockSafe(blockX, blockY);
@@ -156,7 +159,9 @@ bool updateGame() {
 #pragma endregion
 
 #pragma region drawing entities
-    gameData.slime.render(assetManager);
+    for (auto &e: gameData.entities.entities)
+        e.second.render(assetManager);
+
 #pragma endregion
 
 #pragma region drawing the player
@@ -177,7 +182,7 @@ bool updateGame() {
     );
 
     //Drawing the player's hitbox
-    DrawRectangleLinesEx(gameData.player.transform.getAABB(), 0.1, {20, 101, 250, 120});
+    //DrawRectangleLinesEx(gameData.player.transform.getAABB(), 0.1, {20, 101, 250, 120});
 #pragma endregion
 
 #pragma region visualizing block selection
@@ -191,55 +196,28 @@ bool updateGame() {
     );
 #pragma endregion
 
-#pragma region testing collisions
-    // == DISABLED==
-    //Notice: Remove the "/* */" comments to enable one test, but remember to disable the other
+    EndMode2D();
 
-    /*
-    Transform2D test;
-    test.pos={20.5f, 120.5f}; //the position of the camera + 0.5 for the center
-    test.w=1;
-    test.h=1;
+#pragma region imgui_windows
+    if (showImGui) {
+        ImGui::Begin("Dev tools");
 
-    Transform2D test2;
-    test2.pos=worldPos;
-    test2.w=1;
-    test2.h=1;
-    */
+        ImGui::SliderFloat("Camera zoom:", &gameData.camera.zoom, 2, 150);
+        ImGui::SliderFloat("Player speed:", &PLAYER_SPEED, 5, 100);
 
-    //TEST 1: CHECKING POINT COLLISION
-    /*
-    //(the worldPos variable was calculated earlier for the mouse position)
-    if (test.intersectPoint(worldPos)) {
-        DrawRectangleLinesEx(test.getAABB(), 0.1, GREEN);
+        if (ImGui::Button("Spawn Slime")) spawnSlime({40, 0});
+        if (ImGui::Button("Reset player position")) gameData.player.teleport({20, 10});
+
+        ImGui::TextDisabled("(?)");
+        if (ImGui::IsItemHovered()) {
+            ImGui::BeginTooltip();
+            ImGui::Text("Press 7 to disable/enable, F11 for fullscreen and ESC to close the game");
+            ImGui::EndTooltip();
+        }
+        ImGui::End();
     }
-    else {
-        DrawRectangleLinesEx(test.getAABB(), 0.1, BLUE);
-    }
-    */
-
-    //TEST 2: CHECKING TRANSFORM COLLISION
-    /*
-    if (test.intersectTransform(test2)) {
-        DrawRectangleLinesEx(test.getAABB(), 0.1, GREEN);
-        DrawRectangleLinesEx(test2.getAABB(), 0.1, GREEN);
-    }
-    else {
-        DrawRectangleLinesEx(test.getAABB(), 0.1, BLUE);
-        DrawRectangleLinesEx(test2.getAABB(), 0.1, RED);
-    }
-    */
-
-    //TEST 3: VISUALIZING THE PLAYER REACH
-    /*
-    if (Vector2Distance(test.pos, test2.pos)<=1.5f) DrawLineEx(test.pos, worldPos, 0.1, GREEN);
-    else DrawLineEx(test.pos, worldPos, 0.1, RED);
-    DrawCircleV(test.pos, 0.1, PURPLE);
-    */
 
 #pragma endregion
-
-    EndMode2D();
 
     return true;
 }

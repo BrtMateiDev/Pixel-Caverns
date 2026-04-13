@@ -3,57 +3,52 @@
 #include <rlImGui.h>
 #include "gameMain.h"
 
-int main()
-{
+int main() {
 #if PRODUCTION_BUILD==1
 	SetTraceLogLevel(LOG_NONE); //disables raylib console output
 #endif
 #pragma region initializations
 	SetConfigFlags(FLAG_WINDOW_RESIZABLE);
 	InitWindow(800, 450, "Pixel Caverns");
-	SetExitKey(KEY_NULL); //disables exiting on esc
+	//SetExitKey(KEY_NULL); //disables exiting on esc
 	SetTargetFPS(240);
 	rlImGuiSetup(true);
 
-	ImGuiIO &io=ImGui::GetIO();
+	ImGuiIO &io = ImGui::GetIO();
 	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-	io.FontGlobalScale=1.3;
+	io.FontGlobalScale = 1.3;
 #pragma endregion
 
-if (!initGame()) {
-	return 0;
-}
-
-while (!WindowShouldClose()) {
-	BeginDrawing();
-	ClearBackground(BLACK);
-	rlImGuiBegin();
-
-	#pragma region imgui_docking
-		ImGui::PushStyleColor(ImGuiCol_WindowBg,{});
-		ImGui::PushStyleColor(ImGuiCol_DockingEmptyBg,{});
-		ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
-		ImGui::PopStyleColor(2);
-	#pragma endregion
-
-	if (!updateGame()) {
-		CloseWindow();
+	if (!initGame()) {
+		return 0;
 	}
 
-	#pragma region imgui_windows
-		// ImGui::Begin("test");
-		//
-		// ImGui::ShowDemoWindow();
-		//
-		// ImGui::End();
-	#pragma endregion
+	while (!WindowShouldClose()) {
+		BeginDrawing();
+		ClearBackground(BLACK);
+		rlImGuiBegin();
+
+#pragma region imgui_docking
+		/*
+		 ==DISABLED==
+		ImGui::PushStyleColor(ImGuiCol_WindowBg, {});
+		ImGui::PushStyleColor(ImGuiCol_DockingEmptyBg, {});
+		ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
+		ImGui::PopStyleColor(2);
+		*/
+#pragma endregion
+
+		if (!updateGame()) {
+			CloseWindow();
+		}
+
 		rlImGuiEnd();
 		EndDrawing();
-}
+	}
 
-CloseWindow();
-closeGame();
-rlImGuiShutdown();
+	CloseWindow();
+	closeGame();
+	rlImGuiShutdown();
 
-return 0;
+	return 0;
 }
