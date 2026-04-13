@@ -35,7 +35,7 @@ void spawnSlime(Vector2 position) {
     Slime slime;
     slime.physics.teleport(position);
     auto id = gameData.entities.idHolder.getEntityIdAndIncrement();
-    gameData.entities.entities[id] = slime;
+    gameData.entities.entities[id] = std::make_unique<Slime>(slime); //syntax for the usage of unique (smart) pointers
 }
 
 bool initGame() {
@@ -84,14 +84,19 @@ bool updateGame() {
     //entities
     std::ranlux24_base rng(std::random_device{}());
 
-    for (auto &e: gameData.entities.entities) {
-        //"second" means the entity name
-        e.second.update(dt, rng, gameData.player.getPosition());
+    EntityUpdateData updateData{
+        gameData.player.getPosition(),
+        rng,
+    };
 
-        e.second.physics.applyGravity();
-        e.second.physics.updateForces(dt);
-        e.second.physics.resolveConstraints(gameData.gameMap);
-        e.second.physics.updateFinal();
+    for (auto &e: gameData.entities.entities) {
+        //"second" means the entity key in the unordered map
+        e.second->update(dt, updateData);
+
+        e.second->physics.applyGravity();
+        e.second->physics.updateForces(dt);
+        e.second->physics.resolveConstraints(gameData.gameMap);
+        e.second->physics.updateFinal();
     }
 #pragma endregion
 
@@ -160,7 +165,7 @@ bool updateGame() {
 
 #pragma region drawing entities
     for (auto &e: gameData.entities.entities)
-        e.second.render(assetManager);
+        e.second->render(assetManager);
 
 #pragma endregion
 

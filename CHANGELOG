@@ -1,3 +1,6 @@
 Changes:
-- Refactored the code so that entities are stored using IDs, check the new "entityIdHolder" files
-- Overhauled some controls and moved them to an ImGui window
+- Changed the code to support polymorphism, a system that will allow easier implementation of similar entities.
+- Entities are now stored using smart pointers
+
+This change is pretty huge, so definitely check out the new entity header and the changes applied to the rest of the code.
+Just like when I implemented the collision handling, I explained most of the new things in comments.

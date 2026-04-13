@@ -42,6 +42,7 @@ add_executable("${CMAKE_PROJECT_NAME}"
         src/gameLayer/entityAnimation.h
         src/gameLayer/entityIdHolder.h
         src/gameLayer/entityIdHolder.cpp
+        src/gameLayer/entity.h
 )
 
 set_property(TARGET "${CMAKE_PROJECT_NAME}" PROPERTY CXX_STANDARD 17)

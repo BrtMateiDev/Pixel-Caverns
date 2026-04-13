@@ -5,14 +5,13 @@
 #include "physics.h"
 #include "assetManager.h"
 #include "entityAnimation.h"
+#include "entity.h"
 #include <raylib.h>
 #include <random>
 
 struct AssetManager;
 
-struct Slime {
-    PhysicalEntity physics;
-
+struct Slime : Entity {
     Slime() {
         physics.transform.w = 0.8f;
         physics.transform.h = 0.8f;
@@ -24,9 +23,11 @@ struct Slime {
         return physics.transform.pos; //think of this as a shortcut when writing
     }
 
-    void render(AssetManager &assetManager);
+    void render(AssetManager &assetManager) override; //because of the virtual functions we're inheriting!
 
-    void update(float dt, std::ranlux24_base rng, Vector2 playerPosition);
+    void update(float dt, EntityUpdateData entityUpdateData) override;
+
+    int getEntityType() { return EntityType_Slime; }
 
     enum {
         STATE_WANDERING = 0,
