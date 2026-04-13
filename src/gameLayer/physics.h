@@ -146,10 +146,10 @@ struct PhysicalEntity {
     Vector2 velocity={};
     Vector2 acceleration={};
 
-    bool upTouch=0;
-    bool downTouch=0;
-    bool leftTouch=0;
-    bool rightTouch=0;
+    bool upTouch=false;
+    bool downTouch=false;
+    bool leftTouch=false;
+    bool rightTouch=false;
 
     void teleport(Vector2 pos) {
         //If the last position wouldn't be reset, then the "resolveConstraints" function
@@ -181,9 +181,17 @@ struct PhysicalEntity {
         acceleration+={0, 20.f}; //arbitrary value
     }
 
+    void jump(float force) {
+        if (downTouch) velocity.y=-force;
+    }
+
     //called at the end of the frame
     void updateFinal() {
         lastPosition={transform.pos.x, transform.pos.y};
+    }
+
+    Vector2 &getPosition() {
+        return transform.pos;
     }
 
     void resolveConstraints(GameMap &mapData); //edge cases

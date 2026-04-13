@@ -23,6 +23,16 @@ struct Slime {
 
     void render(AssetManager &assetManager);
 
-    void update(float dt);
+    void update(float dt, std::ranlux24_base rng, Vector2 playerPosition);
+    enum {
+        STATE_WANDERING=0,
+        STATE_CHASING,
+    };
+
+    int currentState=STATE_WANDERING;
+
+    float changeStateTimer=1;
+    float jumpTimer=5;
+    float moveSpeed=0; //this will also be used for direction
 };
 #endif

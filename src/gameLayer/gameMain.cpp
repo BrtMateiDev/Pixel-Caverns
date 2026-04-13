@@ -39,7 +39,7 @@ bool initGame() {
     gameData.player.transform.w=0.9f;
     gameData.player.transform.h=1.8f;
 
-    gameData.slime.physics.teleport({40, 20});
+    gameData.slime.physics.teleport({40, 0});
 
     return true;
 }
@@ -58,18 +58,21 @@ bool updateGame() {
     if (IsKeyDown(KEY_A)) gameData.player.transform.pos.x-=CAMERA_SPEED*dt;
     if (IsKeyDown(KEY_S)) gameData.player.transform.pos.y+=CAMERA_SPEED*dt;
     if (IsKeyDown(KEY_D)) gameData.player.transform.pos.x+=CAMERA_SPEED*dt;
+
+    if (IsKeyDown(KEY_SPACE)) gameData.player.jump(10);
 #pragma endregion
 
 #pragma region entities
-    //gameData.player.applyGravity();
-
+    //player
+    gameData.player.applyGravity();
     gameData.player.updateForces(dt);
-    gameData.player.checkCollisionOnce(gameData.player.transform.pos, gameData.gameMap);
+    gameData.player.resolveConstraints(gameData.gameMap);
     gameData.camera.target=gameData.player.transform.pos;
     gameData.player.updateFinal();
 
     //slime
-    gameData.slime.update(dt);
+    std::ranlux24_base rng(std::random_device{}());
+    gameData.slime.update(dt, rng, gameData.player.getPosition());
     gameData.slime.physics.applyGravity();
     gameData.slime.physics.updateForces(dt);
     gameData.slime.physics.resolveConstraints(gameData.gameMap);

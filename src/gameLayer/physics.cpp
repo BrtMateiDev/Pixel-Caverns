@@ -70,9 +70,9 @@ Vector2 PhysicalEntity::performCollisionOnOneAxis(GameMap &mapData, Vector2 pos,
     Vector2 dimensions={transform.w, transform.h};
 
     int minX=floor(pos.x-dimensions.x/2.f-1);
-    int maxX=ceil((pos.x+dimensions.x/2.f+1));
+    int maxX=ceil(pos.x+dimensions.x/2.f+1);
     int minY=floor(pos.y-dimensions.y/2.f-1);
-    int maxY=ceil((pos.y+dimensions.y/2.f+1));
+    int maxY=ceil(pos.y+dimensions.y/2.f+1);
 
     //Making sure the values are within the map;
     minX=std::max(0, minX);
@@ -100,24 +100,24 @@ Vector2 PhysicalEntity::performCollisionOnOneAxis(GameMap &mapData, Vector2 pos,
                         // and dimension/2 is for reaching the center of the hitbox
                     if (delta.x!=0) {
                         if (delta.x<0) {
-                            leftTouch=1;
+                            leftTouch=true;
                             pos.x=x+1+dimensions.x/2;
                             return pos;
                         }
                         else {
-                            rightTouch=1;
+                            rightTouch=true;
                             pos.x=x-dimensions.x/2;
                             return pos;
                         }
                     }
                     else if (delta.y!=0) {
                         if (delta.y<0) {
-                            upTouch=1;
+                            upTouch=true;
                             pos.y=y+1+dimensions.y/2;
                             return pos;
                         }
                         else {
-                            downTouch=1;
+                            downTouch=true;
                             pos.y=y-dimensions.y/2;
                             return pos;
                         }
