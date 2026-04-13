@@ -9,7 +9,7 @@ void Slime::render(AssetManager &assetManager) {
 
     DrawTexturePro(
         assetManager.slime,
-        getTextureAtlas(0, 0, 32, 32),
+        getTextureAtlas(animation.positionX, animation.positionY, 32, 32),
         aabb,
         {0, 0},
         0.0f,
@@ -29,25 +29,28 @@ void Slime::update(float dt, std::ranlux24_base rng, Vector2 playerPosition) {
         } else currentState = STATE_WANDERING;
     }
 
-    if (physics.downTouch) moveSpeed = 0;
+    if (physics.downTouch) {
+        moveSpeed = 0;
+        animation.setAnimation(0); //staying
+    } else animation.setAnimation(1); //in air
     jumpTimer -= dt;
 
     switch (currentState) {
         case STATE_WANDERING:
             if (jumpTimer < 0) {
-                jumpTimer = getRandomFloat(rng, 3, 9);
+                jumpTimer = getRandomFloat(rng, 2, 6);
                 physics.jump(10);
-                moveSpeed = getRandomFloat(rng, -7, 7);
+                moveSpeed = getRandomFloat(rng, -8, 8);
             }
             break;
 
         case STATE_CHASING:
             if (jumpTimer < 0) {
-                jumpTimer = getRandomFloat(rng, 1, 2);
+                jumpTimer = getRandomFloat(rng, 1, 1.5);
                 physics.jump(10);
                 if (playerPosition.x > getPosition().x)
-                    moveSpeed = getRandomFloat(rng, 3, 7);
-                else moveSpeed = -getRandomFloat(rng, 3, 7); //notice the minus
+                    moveSpeed = getRandomFloat(rng, 5, 8);
+                else moveSpeed = -getRandomFloat(rng, 5, 8); //notice the minus
             }
             break;
 
@@ -55,4 +58,6 @@ void Slime::update(float dt, std::ranlux24_base rng, Vector2 playerPosition) {
     }
 
     if (moveSpeed) getPosition().x += dt * moveSpeed;
+
+    animation.update(dt, 0.08, 7);
 }

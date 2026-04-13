@@ -40,6 +40,7 @@ add_executable("${CMAKE_PROJECT_NAME}"
 		src/gameLayer/physics.cpp
 		src/gameLayer/Entities/slime.h
 		src/gameLayer/Entities/slime.cpp
+		src/gameLayer/entityAnimation.h
 )
 
 set_property(TARGET "${CMAKE_PROJECT_NAME}" PROPERTY CXX_STANDARD 17)

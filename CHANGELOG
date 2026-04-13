@@ -1,2 +1,2 @@
 Changes:
-- Reformatted the code for easier readability
+- Added slime animations, check "entityAnimation.h"
