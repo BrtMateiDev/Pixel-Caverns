@@ -15,7 +15,9 @@ void PhysicalEntity::resolveConstraints(GameMap &mapData) {
 
     float GRANULARITY=0.8; //arbitrary value
 
-    if (distance<=GRANULARITY){}
+    if (distance<=GRANULARITY) {
+        checkCollisionOnce(pos, mapData);
+    }
     else {
         //Moving the player in small increments
         Vector2 newPos=lastPosition;

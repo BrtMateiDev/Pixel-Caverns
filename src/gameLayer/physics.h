@@ -172,8 +172,8 @@ struct PhysicalEntity {
         else velocity-=dragVector*drag*dt;
 
         if (Vector2Length(velocity)<0.01) velocity={};
-        acceleration={};
 
+        acceleration={};
         //Last note: These formulas can be improved, but for now they're good enough.
     }
 

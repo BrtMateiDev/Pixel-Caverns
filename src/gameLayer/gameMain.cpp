@@ -8,6 +8,7 @@
 #include "helpers.h"
 #include "worldGenerator.h"
 #include "physics.h"
+#include "Entities/slime.h"
 
 struct GameData {
     GameMap gameMap;
@@ -19,6 +20,8 @@ struct GameData {
     Vector2 selectionEnd={};
 
     PhysicalEntity player;
+
+    Slime slime;
 }gameData;
 
 AssetManager assetManager;
@@ -35,6 +38,8 @@ bool initGame() {
     gameData.player.teleport({20, 0});
     gameData.player.transform.w=0.9f;
     gameData.player.transform.h=1.8f;
+
+    gameData.slime.physics.teleport({40, 20});
 
     return true;
 }
@@ -59,12 +64,16 @@ bool updateGame() {
     //gameData.player.applyGravity();
 
     gameData.player.updateForces(dt);
-
     gameData.player.checkCollisionOnce(gameData.player.transform.pos, gameData.gameMap);
-
     gameData.camera.target=gameData.player.transform.pos;
-
     gameData.player.updateFinal();
+
+    //slime
+    gameData.slime.update(dt);
+    gameData.slime.physics.applyGravity();
+    gameData.slime.physics.updateForces(dt);
+    gameData.slime.physics.resolveConstraints(gameData.gameMap);
+    gameData.slime.physics.updateFinal();
 #pragma endregion
 
 #pragma region camera movement
@@ -122,7 +131,7 @@ bool updateGame() {
     endYView=Clamp(endYView, 0, (float)gameData.gameMap.h-1);
 #pragma endregion
 
-    //Drawing the map
+#pragma region drawing the map
     for (int y=startYView; y<=endYView; ++y)
         for (int x=startXView; x<=endXView; ++x) {
             auto &b=gameData.gameMap.getBlockUnsafe(x,y);
@@ -138,8 +147,13 @@ bool updateGame() {
                 );
             }
         }
+#pragma endregion
 
-    //Drawing the player
+#pragma region drawing entities
+    gameData.slime.render(assetManager);
+#pragma endregion
+
+#pragma region drawing the player
     Transform2D playerSprite=gameData.player.transform;
 
     playerSprite.w=1;
@@ -158,6 +172,7 @@ bool updateGame() {
 
     //Drawing the player's hitbox
     DrawRectangleLinesEx(gameData.player.transform.getAABB(), 0.1, {20, 101, 250, 120});
+#pragma endregion
 
 #pragma region visualizing block selection
     DrawTexturePro(

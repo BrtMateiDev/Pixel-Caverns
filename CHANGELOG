@@ -1,2 +1,3 @@
 Changes:
-Nevermind there were still three more typos (╥﹏╥), but it's all good now!
+- Added the slime entity (NOTE: This is very likely temporary and won't be in the final game)
+- Fixed another bug in physics.cpp, I forgot to include a line of code which caused the collisions to fail
