@@ -1,8 +1,7 @@
 Changes:
-- Implemented the FastNoiseLite library for cave generation.
+- Breaking a block will drop it as an item.
+- Nearby dropped items of the same type nearby will be grouped into one (with counting).
 
-NOTES:
-The current noise configurations are entirely for testing and will be changed.
-This time, instead of explaining everything in comments, I encourage you to visit: "https://auburn.github.io/FastNoiseLite/".
-It's a very nice tool for visualizing the library's capabilities, but also understanding the functions I used.
-(Also, to properly visualize my threshold variable, go to the "Preview Settings" tab and make the "Black Point" slider always bigger than white by 0.001.
+NOTE:
+Almost the entire implementation of this system is temporary and meant for testing, this is meant only for entities, as mined blocks will be sent straight to your inventory.
+Also, the architecture is brute-forced and will be refactored significantly in the future. This is the only time I don't advise to understand the code, as it will be irrelevant soon.

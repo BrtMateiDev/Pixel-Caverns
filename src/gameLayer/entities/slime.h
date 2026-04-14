@@ -25,7 +25,7 @@ struct Slime : Entity {
 
     void render(AssetManager &assetManager) override; //because of the virtual functions we're inheriting!
 
-    void update(float dt, EntityUpdateData entityUpdateData) override;
+    bool update(float dt, EntityUpdateData entityUpdateData) override;
 
     int getEntityType() { return EntityType_Slime; }
 

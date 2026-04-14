@@ -6,15 +6,21 @@
 #include "physics.h"
 
 struct AssetManager;
+struct EntityHolder;
 
 enum EntityType {
     EntityType_PLayer = 0,
     EntityType_Slime,
+    EntityType_DroppedItem,
 };
 
 struct EntityUpdateData {
     Vector2 playerPosition = {};
+
     std::ranlux24_base &rng;
+    EntityHolder &entityHolder;
+
+    std::uint64_t ownId = 0;
 };
 
 /*Pay attention to the struct above. As the code will evolve, new parameters will have to eventually be added, just imagine how
@@ -35,9 +41,9 @@ struct Entity {
     //A virtual function is used in polymorphism and is expected to be overridden
     virtual void render(AssetManager &assetManager) = 0;
 
-    virtual void update(float dt, EntityUpdateData entityUpdateData) = 0;
+    virtual bool update(float dt, EntityUpdateData entityUpdateData) = 0;
 
-    virtual int getEntityType() =0;
+    virtual int getEntityType() = 0;
 };
 
 #endif

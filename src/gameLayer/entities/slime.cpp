@@ -17,7 +17,7 @@ void Slime::render(AssetManager &assetManager) {
     );
 }
 
-void Slime::update(float dt, EntityUpdateData entityUpdateData) {
+bool Slime::update(float dt, EntityUpdateData entityUpdateData) {
     changeStateTimer -= dt;
     if (changeStateTimer < 0) {
         changeStateTimer = getRandomFloat(entityUpdateData.rng, 1, 6); //think of this as the attention span
@@ -60,4 +60,6 @@ void Slime::update(float dt, EntityUpdateData entityUpdateData) {
     if (moveSpeed) getPosition().x += dt * moveSpeed;
 
     animation.update(dt, 0.08, 7);
+
+    return true;
 }

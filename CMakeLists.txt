@@ -18,7 +18,9 @@ add_subdirectory(thirdparty/rlImGui)
 
 file(GLOB_RECURSE MY_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 
-add_executable("${CMAKE_PROJECT_NAME}")
+add_executable("${CMAKE_PROJECT_NAME}"
+        src/gameLayer/entities/droppedItem.h
+        src/gameLayer/entities/droppedItem.cpp)
 set_property(TARGET "${CMAKE_PROJECT_NAME}" PROPERTY CXX_STANDARD 17)
 
 if (PRODUCTION_BUILD)

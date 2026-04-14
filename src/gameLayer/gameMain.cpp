@@ -11,6 +11,7 @@
 #include "physics.h"
 #include "entities/slime.h"
 #include "entityIdHolder.h"
+#include "entities/droppedItem.h"
 
 bool showImGui = true;
 
@@ -30,12 +31,26 @@ struct GameData {
 
 AssetManager assetManager;
 
-//quick function for spawning
+//functions for spawning
 void spawnSlime(Vector2 position) {
     Slime slime;
+
     slime.physics.teleport(position);
+
     auto id = gameData.entities.idHolder.getEntityIdAndIncrement();
+
     gameData.entities.entities[id] = std::make_unique<Slime>(slime); //syntax for the usage of unique (smart) pointers
+}
+
+void spawnDroppedItem(Vector2 position, int type) {
+    DroppedItem droppedItem;
+
+    droppedItem.teleport(position);
+    droppedItem.itemType = type;
+
+    auto id = gameData.entities.idHolder.getEntityIdAndIncrement();
+
+    gameData.entities.entities[id] = (std::make_unique<DroppedItem>(droppedItem));
 }
 
 bool initGame() {
@@ -84,19 +99,27 @@ bool updateGame() {
     //entities
     std::ranlux24_base rng(std::random_device{}());
 
-    EntityUpdateData updateData{
-        gameData.player.getPosition(),
-        rng,
-    };
+    for (auto it = gameData.entities.entities.begin(); it != gameData.entities.entities.end();) {
+        EntityUpdateData updateData{
+            gameData.player.getPosition(),
+            rng,
+            gameData.entities,
+            it->first
+        };
 
-    for (auto &e: gameData.entities.entities) {
-        //"second" means the entity key in the unordered map
-        e.second->update(dt, updateData);
+        bool shouldKill = false;
 
-        e.second->physics.applyGravity();
-        e.second->physics.updateForces(dt);
-        e.second->physics.resolveConstraints(gameData.gameMap);
-        e.second->physics.updateFinal();
+        if (!it->second->update(dt, updateData)) shouldKill = true;
+
+        if (shouldKill) it = gameData.entities.entities.erase(it); //returns the next valid iterator
+        else {
+            it->second->physics.applyGravity();
+            it->second->physics.updateForces(dt);
+            it->second->physics.resolveConstraints(gameData.gameMap);
+            it->second->physics.updateFinal();
+
+            ++it;
+        }
     }
 #pragma endregion
 
@@ -118,7 +141,11 @@ bool updateGame() {
 
     if (!showImGui && IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
         auto b = gameData.gameMap.getBlockSafe(blockX, blockY);
-        if (b) *b = {};
+        if (b) {
+            //0.5 for the middle of the block
+            if (b->type) spawnDroppedItem({(float) blockX + 0.5f, (float) blockY + 0.5f}, b->type);
+            *b = {};
+        }
     } //checking ImGui so that you can't break blocks when moving the window
 
     if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
