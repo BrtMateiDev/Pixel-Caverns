@@ -1,2 +1,2 @@
 Changes:
-- Separated the player into its own header, which will offer more flexibility in the future.
+- Added health to entities, you can test it with the "Hurt a slime" button (only attacks the slime with the smallest ID).

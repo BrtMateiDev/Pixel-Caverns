@@ -23,5 +23,7 @@ struct DroppedItem : public Entity {
     bool update(float dt, EntityUpdateData entityUpdateData) override;
 
     int getEntityType() { return EntityType_DroppedItem; }
+
+    float getMaxLife() { return 1.f; } //not an actual health bar
 };
 #endif

@@ -14,8 +14,6 @@
 #include "player.h"
 #include "entities/droppedItem.h"
 
-bool showImGui = true;
-
 struct GameData {
     GameMap gameMap;
     Camera2D camera = {};
@@ -110,7 +108,7 @@ bool updateGame() {
 
         bool shouldKill = false;
 
-        if (!it->second->update(dt, updateData)) shouldKill = true;
+        if (!it->second->update(dt, updateData) || it->second->life <= 0) shouldKill = true;
 
         if (shouldKill) it = gameData.entities.entities.erase(it); //returns the next valid iterator
         else {
@@ -133,14 +131,13 @@ bool updateGame() {
         gameData.creativeSelectedBlock++;
         if (gameData.creativeSelectedBlock >= Block::BLOCKS_COUNT) gameData.creativeSelectedBlock = 1;
     }
-    if (IsKeyPressed(KEY_SEVEN)) showImGui = !showImGui;
 
     Vector2 worldPos = GetScreenToWorld2D(GetMousePosition(), gameData.camera);;
 
     int blockX = floor(worldPos.x);
     int blockY = floor(worldPos.y);
 
-    if (!showImGui && IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+    if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
         auto b = gameData.gameMap.getBlockSafe(blockX, blockY);
         if (b) {
             //0.5 for the middle of the block
@@ -232,25 +229,32 @@ bool updateGame() {
     EndMode2D();
 
 #pragma region imgui_windows
-    if (showImGui) {
-        ImGui::Begin("Dev tools");
 
-        ImGui::SliderFloat("Camera zoom:", &gameData.camera.zoom, 2, 150);
-        ImGui::SliderFloat("Player speed:", &PLAYER_SPEED, 5, 100);
+    ImGui::Begin("Dev tools");
 
-        if (ImGui::Button("Spawn Slime")) spawnSlime({40, 0});
-        if (ImGui::Button("Reset player position")) gameData.player.teleport({20, 10});
+    ImGui::SliderFloat("Camera zoom", &gameData.camera.zoom, 1, 175);
+    ImGui::SliderFloat("Player speed", &PLAYER_SPEED, 5, 100);
 
-        ImGui::TextDisabled("(?)");
-        if (ImGui::IsItemHovered()) {
-            ImGui::BeginTooltip();
-            ImGui::Text(
-                "Press 7 to disable/enable, F11 for fullscreen and ESC to close the game\n"
-                "You can also press -/+ to scroll through available blocks");
-            ImGui::EndTooltip();
+    if (ImGui::Button("Spawn Slime")) spawnSlime({40, 0});
+    if (ImGui::Button("Hurt a Slime")) {
+        for (auto &e: gameData.entities.entities) {
+            if (e.second->getEntityType() == EntityType_Slime) {
+                e.second->life -= 3;
+                break;
+            }
         }
-        ImGui::End();
     }
+    if (ImGui::Button("Reset player position")) gameData.player.teleport({20, 10});
+
+    ImGui::TextDisabled("(?)");
+    if (ImGui::IsItemHovered()) {
+        ImGui::BeginTooltip();
+        ImGui::Text(
+            "Press F11 for fullscreen and ESC to close the game\n"
+            "You can also press -/+ to scroll through available blocks");
+        ImGui::EndTooltip();
+    }
+    ImGui::End();
 
 #pragma endregion
 

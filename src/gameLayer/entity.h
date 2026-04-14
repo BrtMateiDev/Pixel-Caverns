@@ -29,6 +29,7 @@ struct, it will only be needed to add the new parameters right here instead of u
 
 struct Entity {
     PhysicalEntity physics;
+    float life = 1;
 
     Vector2 &getPosition() {
         return physics.transform.pos;
@@ -44,6 +45,8 @@ struct Entity {
     virtual bool update(float dt, EntityUpdateData entityUpdateData) = 0;
 
     virtual int getEntityType() = 0;
+
+    virtual float getMaxLife() = 0;
 };
 
 #endif

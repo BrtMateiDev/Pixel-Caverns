@@ -38,10 +38,12 @@ int main() {
 		*/
 #pragma endregion
 
-		//This disables the generation of ImGui.ini
+		//This disables the generation of ImGui.ini and in-game dragging
 		ImGui::CreateContext();
 		ImGuiIO &io = ImGui::GetIO();
 		io.IniFilename = nullptr;
+		ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
+		ImGui::SetNextWindowSize(ImVec2(300, 200), ImGuiCond_FirstUseEver);
 
 		if (!updateGame()) {
 			CloseWindow();

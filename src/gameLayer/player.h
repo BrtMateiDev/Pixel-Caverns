@@ -12,6 +12,8 @@ struct Player : public Entity {
     Player() {
         physics.transform.w = 0.8f;
         physics.transform.h = 1.6f;
+
+        life = getMaxLife();
     }
 
     Vector2 &getPosition() {
@@ -23,6 +25,8 @@ struct Player : public Entity {
     bool update(float dt, EntityUpdateData entityUpdateData) override;
 
     int getEntityType() { return EntityType_Player; }
+
+    float getMaxLife() { return 10; }
 };
 
 #endif
