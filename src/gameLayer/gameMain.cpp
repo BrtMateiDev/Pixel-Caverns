@@ -1,6 +1,7 @@
 #include <raylib.h>
 #include <raymath.h>
 #include <imgui.h>
+#include <FastNoiseLite.h>
 #include <fstream>
 #include <cmath>
 #include "gameMain.h"
@@ -216,7 +217,9 @@ bool updateGame() {
         ImGui::TextDisabled("(?)");
         if (ImGui::IsItemHovered()) {
             ImGui::BeginTooltip();
-            ImGui::Text("Press 7 to disable/enable, F11 for fullscreen and ESC to close the game");
+            ImGui::Text(
+                "Press 7 to disable/enable, F11 for fullscreen and ESC to close the game\n"
+                "You can also press -/+ to scroll through available blocks");
             ImGui::EndTooltip();
         }
         ImGui::End();

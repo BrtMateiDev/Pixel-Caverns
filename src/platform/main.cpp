@@ -38,6 +38,11 @@ int main() {
 		*/
 #pragma endregion
 
+		//This disables the generation of ImGui.ini
+		ImGui::CreateContext();
+		ImGuiIO &io = ImGui::GetIO();
+		io.IniFilename = nullptr;
+
 		if (!updateGame()) {
 			CloseWindow();
 		}

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.16)
 project(raylib)
 
 # Avoid excessive expansion of variables in conditionals. In particular, if
@@ -20,10 +20,10 @@ set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 # RAYLIB_IS_MAIN determines whether the project is being used from root
 # or if it is added as a dependency (through add_subdirectory for example).
 if ("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
-  set(RAYLIB_IS_MAIN TRUE)
-else()
-  set(RAYLIB_IS_MAIN FALSE)
-endif()
+    set(RAYLIB_IS_MAIN TRUE)
+else ()
+    set(RAYLIB_IS_MAIN FALSE)
+endif ()
 
 # Sets compiler flags and language standard
 include(CompilerFlags)
@@ -38,19 +38,19 @@ include(BuildOptions)
 add_subdirectory(src raylib)
 
 # Uninstall target
-if(NOT TARGET uninstall)
-  configure_file(
-    "${CMAKE_MODULE_PATH}/Uninstall.cmake"
-    "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
-    IMMEDIATE @ONLY)
+if (NOT TARGET uninstall)
+    configure_file(
+            "${CMAKE_MODULE_PATH}/Uninstall.cmake"
+            "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
+            IMMEDIATE @ONLY)
 
-  add_custom_target(uninstall
-    COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
-endif()
+    add_custom_target(uninstall
+            COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
+endif ()
 
 if (${BUILD_EXAMPLES})
-  MESSAGE(STATUS "Building examples is enabled")
-  add_subdirectory(examples)
-endif()
+    MESSAGE(STATUS "Building examples is enabled")
+    add_subdirectory(examples)
+endif ()
 
 enable_testing()
