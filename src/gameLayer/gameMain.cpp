@@ -1,7 +1,6 @@
 #include <raylib.h>
 #include <raymath.h>
 #include <imgui.h>
-#include <FastNoiseLite.h>
 #include <fstream>
 #include <cmath>
 #include "gameMain.h"

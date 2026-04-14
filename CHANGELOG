@@ -1,2 +1,8 @@
 Changes:
-- Reconfigured CMake in order to compile to Windows as well
+- Implemented the FastNoiseLite library for cave generation.
+
+NOTES:
+The current noise configurations are entirely for testing and will be changed.
+This time, instead of explaining everything in comments, I encourage you to visit: "https://auburn.github.io/FastNoiseLite/".
+It's a very nice tool for visualizing the library's capabilities, but also understanding the functions I used.
+(Also, to properly visualize my threshold variable, go to the "Preview Settings" tab and make the "Black Point" slider always bigger than white by 0.001.
