@@ -11,6 +11,7 @@
 #include "physics.h"
 #include "entities/slime.h"
 #include "entityIdHolder.h"
+#include "player.h"
 #include "entities/droppedItem.h"
 
 bool showImGui = true;
@@ -24,7 +25,7 @@ struct GameData {
     Vector2 selectionStart = {};
     Vector2 selectionEnd = {};
 
-    PhysicalEntity player;
+    Player player;
 
     EntityHolder entities;
 } gameData;
@@ -63,8 +64,8 @@ bool initGame() {
     gameData.camera.zoom = 100.0f;
 
     gameData.player.teleport({20, 0});
-    gameData.player.transform.w = 0.9f;
-    gameData.player.transform.h = 1.8f;
+    gameData.player.physics.transform.w = 0.9f;
+    gameData.player.physics.transform.h = 1.8f;
 
     return true;
 }
@@ -80,21 +81,21 @@ bool updateGame() {
 
 #pragma region player movement
     static float PLAYER_SPEED = 10;
-    if (IsKeyDown(KEY_W)) gameData.player.transform.pos.y -= PLAYER_SPEED * dt;
-    if (IsKeyDown(KEY_A)) gameData.player.transform.pos.x -= PLAYER_SPEED * dt;
-    if (IsKeyDown(KEY_S)) gameData.player.transform.pos.y += PLAYER_SPEED * dt;
-    if (IsKeyDown(KEY_D)) gameData.player.transform.pos.x += PLAYER_SPEED * dt;
+    if (IsKeyDown(KEY_W)) gameData.player.physics.transform.pos.y -= PLAYER_SPEED * dt;
+    if (IsKeyDown(KEY_A)) gameData.player.physics.transform.pos.x -= PLAYER_SPEED * dt;
+    if (IsKeyDown(KEY_S)) gameData.player.physics.transform.pos.y += PLAYER_SPEED * dt;
+    if (IsKeyDown(KEY_D)) gameData.player.physics.transform.pos.x += PLAYER_SPEED * dt;
 
-    if (IsKeyDown(KEY_SPACE)) gameData.player.jump(10);
+    if (IsKeyDown(KEY_SPACE)) gameData.player.physics.jump(10);
 #pragma endregion
 
 #pragma region entities
     //player
-    gameData.player.applyGravity();
-    gameData.player.updateForces(dt);
-    gameData.player.resolveConstraints(gameData.gameMap);
-    gameData.camera.target = gameData.player.transform.pos;
-    gameData.player.updateFinal();
+    gameData.player.physics.applyGravity();
+    gameData.player.physics.updateForces(dt);
+    gameData.player.physics.resolveConstraints(gameData.gameMap);
+    gameData.camera.target = gameData.player.physics.transform.pos;
+    gameData.player.physics.updateFinal();
 
     //entities
     std::ranlux24_base rng(std::random_device{}());
@@ -197,12 +198,12 @@ bool updateGame() {
 #pragma endregion
 
 #pragma region drawing the player
-    Transform2D playerSprite = gameData.player.transform;
+    Transform2D playerSprite = gameData.player.physics.transform;
 
     playerSprite.w = 1;
     playerSprite.h = 2;
     //Moving the sprite so that the bottom of it matches the bottom of the hitbox
-    playerSprite.pos.y -= (playerSprite.h - gameData.player.transform.h) / 2;
+    playerSprite.pos.y -= (playerSprite.h - gameData.player.physics.transform.h) / 2;
 
     DrawTexturePro(
         assetManager.player,

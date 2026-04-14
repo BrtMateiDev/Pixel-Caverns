@@ -1,7 +1,2 @@
 Changes:
-- Breaking a block will drop it as an item.
-- Nearby dropped items of the same type nearby will be grouped into one (with counting).
-
-NOTE:
-Almost the entire implementation of this system is temporary and meant for testing, this is meant only for entities, as mined blocks will be sent straight to your inventory.
-Also, the architecture is brute-forced and will be refactored significantly in the future. This is the only time I don't advise to understand the code, as it will be irrelevant soon.
+- Separated the player into its own header, which will offer more flexibility in the future.

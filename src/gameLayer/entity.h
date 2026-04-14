@@ -9,7 +9,7 @@ struct AssetManager;
 struct EntityHolder;
 
 enum EntityType {
-    EntityType_PLayer = 0,
+    EntityType_Player = 0,
     EntityType_Slime,
     EntityType_DroppedItem,
 };
