@@ -15,7 +15,10 @@
 #include "entities/droppedItem.h"
 
 struct GameData {
-    GameMap gameMap;
+    GameMap worldMap;
+    GameMap baseMap;
+    GameMap *activeMap = nullptr;
+
     Camera2D camera = {};
 
     int creativeSelectedBlock = Block::dirt;
@@ -55,7 +58,10 @@ void spawnDroppedItem(Vector2 position, int type) {
 bool initGame() {
     assetManager.loadAll();
 
-    generateWorld(gameData.gameMap, 1);
+    generateWorld(gameData.worldMap, 1);
+    generatePlayerBase(gameData.baseMap);
+
+    gameData.activeMap = &gameData.worldMap;
 
     gameData.camera.target = {20.f, 120.f};
     gameData.camera.rotation = 0.0f;
@@ -91,7 +97,7 @@ bool updateGame() {
     //player
     gameData.player.physics.applyGravity();
     gameData.player.physics.updateForces(dt);
-    gameData.player.physics.resolveConstraints(gameData.gameMap);
+    gameData.player.physics.resolveConstraints(gameData.worldMap);
     gameData.camera.target = gameData.player.physics.transform.pos;
     gameData.player.physics.updateFinal();
 
@@ -114,7 +120,7 @@ bool updateGame() {
         else {
             it->second->physics.applyGravity();
             it->second->physics.updateForces(dt);
-            it->second->physics.resolveConstraints(gameData.gameMap);
+            it->second->physics.resolveConstraints(gameData.worldMap);
             it->second->physics.updateFinal();
 
             ++it;
@@ -137,17 +143,24 @@ bool updateGame() {
     int blockX = floor(worldPos.x);
     int blockY = floor(worldPos.y);
 
-    if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
-        auto b = gameData.gameMap.getBlockSafe(blockX, blockY);
+    //This lamba function is for not accessing things out of bounds
+    auto boundCheck = [](int x, int y) {
+        if (x >= 0 && x < gameData.activeMap->w && y >= 0 && y < gameData.activeMap->h)
+            return true;
+        return false;
+    };
+
+    if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && boundCheck(blockX, blockY)) {
+        auto b = gameData.worldMap.getBlockSafe(blockX, blockY);
         if (b) {
             //0.5 for the middle of the block
             if (b->type) spawnDroppedItem({(float) blockX + 0.5f, (float) blockY + 0.5f}, b->type);
             *b = {};
         }
-    } //checking ImGui so that you can't break blocks when moving the window
+    }
 
-    if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
-        auto b = gameData.gameMap.getBlockSafe(blockX, blockY);
+    if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT) && boundCheck(blockX, blockY)) {
+        auto b = gameData.worldMap.getBlockSafe(blockX, blockY);
         if (b) b->type = gameData.creativeSelectedBlock;
     }
 #pragma endregion
@@ -165,25 +178,27 @@ bool updateGame() {
     int endYView = (int) ceilf(bottomRightView.y + 1);
 
     //Clamp means the variable can't have a value outside those bounds
-    startXView = Clamp(startXView, 0, (float) gameData.gameMap.w - 1);
-    endXView = Clamp(endXView, 0, (float) gameData.gameMap.w - 1);
-    startYView = Clamp(startYView, 0, (float) gameData.gameMap.h - 1);
-    endYView = Clamp(endYView, 0, (float) gameData.gameMap.h - 1);
+    startXView = Clamp(startXView, 0, (float) gameData.worldMap.w - 1);
+    endXView = Clamp(endXView, 0, (float) gameData.worldMap.w - 1);
+    startYView = Clamp(startYView, 0, (float) gameData.worldMap.h - 1);
+    endYView = Clamp(endYView, 0, (float) gameData.worldMap.h - 1);
 #pragma endregion
 
 #pragma region drawing the map
     for (int y = startYView; y <= endYView; ++y)
         for (int x = startXView; x <= endXView; ++x) {
-            auto &b = gameData.gameMap.getBlockUnsafe(x, y);
-            if (b.type != Block::air) {
-                DrawTexturePro(
-                    assetManager.textures,
-                    getTextureAtlas(b.type, 0, 32, 32),
-                    {(float) x, (float) y, 1, 1},
-                    {0, 0},
-                    0.0f,
-                    WHITE
-                );
+            if (boundCheck(x, y)) {
+                auto &b = gameData.activeMap->getBlockUnsafe(x, y);
+                if (b.type != Block::air) {
+                    DrawTexturePro(
+                        assetManager.textures,
+                        getTextureAtlas(b.type, 0, 32, 32),
+                        {(float) x, (float) y, 1, 1},
+                        {0, 0},
+                        0.0f,
+                        WHITE
+                    );
+                }
             }
         }
 #pragma endregion
@@ -202,14 +217,15 @@ bool updateGame() {
 #pragma endregion
 
 #pragma region visualizing block selection
-    DrawTexturePro(
-        assetManager.frame,
-        {0, 0, (float) assetManager.frame.width, (float) assetManager.frame.height},
-        {(float) blockX, (float) blockY, 1, 1},
-        {0, 0},
-        0.f,
-        WHITE
-    );
+    if (boundCheck(blockX, blockY))
+        DrawTexturePro(
+            assetManager.frame,
+            {0, 0, (float) assetManager.frame.width, (float) assetManager.frame.height},
+            {(float) blockX, (float) blockY, 1, 1},
+            {0, 0},
+            0.f,
+            WHITE
+        );
 #pragma endregion
 
     EndMode2D();
@@ -229,7 +245,15 @@ bool updateGame() {
             }
         }
     }
-    if (ImGui::Button("Reset player position")) gameData.player.teleport({20, 10});
+
+    if (ImGui::Button("Teleport to base")) {
+        gameData.activeMap = &gameData.baseMap;
+        gameData.player.teleport({5, 2});
+    }
+    if (ImGui::Button("Teleport to mine")) {
+        gameData.activeMap = &gameData.worldMap;
+        gameData.player.teleport({20, 10});
+    }
 
     ImGui::TextDisabled("(?)");
     if (ImGui::IsItemHovered()) {

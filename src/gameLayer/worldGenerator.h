@@ -3,6 +3,9 @@
 
 #pragma once
 #include "gameMap.h"
+
+void generatePlayerBase(GameMap &baseMap);
+
 void generateWorld(GameMap &gameMap, int seed);
 
 #endif

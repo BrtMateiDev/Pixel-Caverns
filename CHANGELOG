@@ -1,3 +1,3 @@
 Changes:
-- Surprise! The player is a cat now (this was always intended :3)
-- The player's hitbox has been modified accordingly (the tail doesn't have it)
+- Created a second map for the player base (just functionality, not design)
+Note: I've only done the rendering for now, all physics functions are still processed on the main map.

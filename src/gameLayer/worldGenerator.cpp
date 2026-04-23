@@ -3,6 +3,27 @@
 #include "gameMap.h"
 #include "randomStuff.h"
 
+void generatePlayerBase(GameMap &baseMap) {
+    const int BASE_WIDTH = 15;
+    const int BASE_HEIGHT = 6;
+
+    int playerBase[BASE_HEIGHT][BASE_WIDTH] =
+    {
+        {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+        {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+        {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+        {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+        {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+        {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
+    };
+
+    baseMap.create(BASE_WIDTH, BASE_HEIGHT);
+
+    for (int y = 0; y < BASE_HEIGHT; ++y)
+        for (int x = 0; x < BASE_WIDTH; ++x)
+            baseMap.getBlockUnsafe(x, y).type = playerBase[y][x];
+}
+
 void generateWorld(GameMap &gameMap, int seed) {
     const int w = 500;
     const int h = 500;
