@@ -5,11 +5,12 @@
 #include <raylib.h>
 
 struct AssetManager {
-    Texture2D dirt={};
-    Texture2D textures={};
-    Texture2D frame={};
-    Texture2D player={};
-    Texture2D slime={};
+    Texture2D dirt = {};
+    Texture2D textures = {};
+    Texture2D frame = {};
+    Texture2D player = {};
+    Texture2D tail = {};
+    Texture2D slime = {};
 
     void loadAll();
 };

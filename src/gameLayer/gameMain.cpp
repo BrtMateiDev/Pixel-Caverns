@@ -62,8 +62,8 @@ bool initGame() {
     gameData.camera.zoom = 100.0f;
 
     gameData.player.teleport({20, 0});
-    gameData.player.physics.transform.w = 0.9f;
-    gameData.player.physics.transform.h = 1.8f;
+    gameData.player.physics.transform.w = assetManager.player.width * pixel;
+    gameData.player.physics.transform.h = assetManager.player.height * pixel;
 
     return true;
 }
@@ -195,24 +195,10 @@ bool updateGame() {
 #pragma endregion
 
 #pragma region drawing the player
-    Transform2D playerSprite = gameData.player.physics.transform;
-
-    playerSprite.w = 1;
-    playerSprite.h = 2;
-    //Moving the sprite so that the bottom of it matches the bottom of the hitbox
-    playerSprite.pos.y -= (playerSprite.h - gameData.player.physics.transform.h) / 2;
-
-    DrawTexturePro(
-        assetManager.player,
-        {0, 0, (float) assetManager.player.width, (float) assetManager.player.height},
-        playerSprite.getAABB(),
-        {0, 0},
-        0.0f,
-        WHITE
-    );
-
+    gameData.player.render_tail(assetManager);
+    gameData.player.render(assetManager);
     //Drawing the player's hitbox
-    //DrawRectangleLinesEx(gameData.player.transform.getAABB(), 0.1, {20, 101, 250, 120});
+    //DrawRectangleLinesEx(gameData.player.physics.transform.getAABB(), 0.1, {20, 101, 250, 120});
 #pragma endregion
 
 #pragma region visualizing block selection
@@ -234,7 +220,6 @@ bool updateGame() {
 
     ImGui::SliderFloat("Camera zoom", &gameData.camera.zoom, 1, 175);
     ImGui::SliderFloat("Player speed", &PLAYER_SPEED, 5, 100);
-
     if (ImGui::Button("Spawn Slime")) spawnSlime({40, 0});
     if (ImGui::Button("Hurt a Slime")) {
         for (auto &e: gameData.entities.entities) {

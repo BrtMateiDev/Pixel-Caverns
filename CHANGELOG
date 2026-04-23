@@ -1,2 +1,3 @@
 Changes:
-- Added health to entities, you can test it with the "Hurt a slime" button (only attacks the slime with the smallest ID).
+- Surprise! The player is a cat now (this was always intended :3)
+- The player's hitbox has been modified accordingly (the tail doesn't have it)

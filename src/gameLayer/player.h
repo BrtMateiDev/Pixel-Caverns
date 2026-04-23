@@ -10,8 +10,8 @@ struct AssetManager;
 
 struct Player : public Entity {
     Player() {
-        physics.transform.w = 0.8f;
-        physics.transform.h = 1.6f;
+        physics.transform.w = 1.40625f;
+        physics.transform.h = 1.125f;
 
         life = getMaxLife();
     }
@@ -21,6 +21,8 @@ struct Player : public Entity {
     }
 
     void render(AssetManager &assetManager) override;
+
+    void render_tail(AssetManager &assetManager);
 
     bool update(float dt, EntityUpdateData entityUpdateData) override;
 

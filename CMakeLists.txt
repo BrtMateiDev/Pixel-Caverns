@@ -22,7 +22,8 @@ add_executable("${CMAKE_PROJECT_NAME}"
         src/gameLayer/entities/droppedItem.h
         src/gameLayer/entities/droppedItem.cpp
         src/gameLayer/player.h
-        src/gameLayer/player.cpp)
+        src/gameLayer/player.cpp
+)
 set_property(TARGET "${CMAKE_PROJECT_NAME}" PROPERTY CXX_STANDARD 17)
 
 if (PRODUCTION_BUILD)

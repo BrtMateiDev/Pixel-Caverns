@@ -2,16 +2,32 @@
 #include "assetManager.h"
 #include "helpers.h"
 
-void Player::render(AssetManager &assetManager) {
-    auto aabb = physics.transform.getAABB();
+
+void Player::render_tail(AssetManager &assetManager) {
+    auto c = physics.transform.getBottomLeft();
+    c.x -= 11 * pixel;
+    c.y -= 9 * pixel;
 
     DrawTexturePro(
-        assetManager.player,
-        {0, 0, (float) assetManager.player.width, (float) assetManager.player.height},
-        aabb,
-        {0, 0},
-        0.0f,
-        WHITE
+        assetManager.tail, //texture
+        {0, 0, (float) assetManager.tail.width, (float) assetManager.tail.height}, //source
+        {c.x, c.y, 17 * pixel, 9 * pixel}, //destination
+        {0, 0}, //origin
+        0.0f, //rotation
+        WHITE //tint
+    );
+}
+
+void Player::render(AssetManager &assetManager) {
+    auto aabb_player = physics.transform.getAABB();
+
+    DrawTexturePro(
+        assetManager.player, //texture
+        {0, 0, (float) assetManager.player.width, (float) assetManager.player.height}, //source
+        aabb_player, //destination
+        {0, 0}, //origin
+        0.0f, //rotation
+        WHITE //tint
     );
 }
 
