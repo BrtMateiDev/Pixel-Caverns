@@ -12,7 +12,7 @@
 #include "entities/slime.h"
 #include "entityIdHolder.h"
 #include "player.h"
-#include "entities/droppedItem.h"
+#include "playerBase/storage.h"
 
 struct GameData {
     GameMap worldMap;
@@ -43,17 +43,6 @@ void spawnSlime(Vector2 position) {
     auto id = gameData.entities.idHolder.getEntityIdAndIncrement();
 
     gameData.entities.entities[id] = std::make_unique<Slime>(slime); //syntax for the usage of unique (smart) pointers
-}
-
-void spawnDroppedItem(Vector2 position, int type) {
-    DroppedItem droppedItem;
-
-    droppedItem.teleport(position);
-    droppedItem.itemType = type;
-
-    auto id = gameData.entities.idHolder.getEntityIdAndIncrement();
-
-    gameData.entities.entities[id] = (std::make_unique<DroppedItem>(droppedItem));
 }
 
 bool initGame() {
@@ -154,12 +143,11 @@ bool updateGame() {
             return true;
         return false;
     };
-    if (gameData.activeEntities) {
+    if (gameData.activeMap == &gameData.worldMap) {
         if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && boundCheck(blockX, blockY)) {
             auto b = gameData.worldMap.getBlockSafe(blockX, blockY);
-            if (b) {
-                //0.5 for the middle of the block
-                if (b->type) spawnDroppedItem({(float) blockX + 0.5f, (float) blockY + 0.5f}, b->type);
+            if (b->type) {
+                gameData.player.inventory.mineOre(b);
                 *b = {};
             }
         }
@@ -239,6 +227,12 @@ bool updateGame() {
     EndMode2D();
 
 #pragma region imgui_windows
+    //This disables the generation of ImGui.ini and in-game dragging
+    ImGui::CreateContext();
+    ImGuiIO &io = ImGui::GetIO();
+    io.IniFilename = nullptr;
+    ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(300, 200), ImGuiCond_Always);
 
     ImGui::Begin("Dev tools");
 
@@ -266,6 +260,11 @@ bool updateGame() {
         gameData.player.teleport({20, 10});
     }
 
+    if (gameData.activeMap == &gameData.baseMap) {
+        ImGui::Separator();
+        if (ImGui::Button("Deposit ores")) storage.depositOres(gameData.player.inventory.minedOres);
+    }
+
     ImGui::TextDisabled("(?)");
     if (ImGui::IsItemHovered()) {
         ImGui::BeginTooltip();
@@ -275,6 +274,31 @@ bool updateGame() {
         ImGui::EndTooltip();
     }
     ImGui::End();
+
+    //Player inventory window
+    ImGui::SetNextWindowPos(ImVec2(GetScreenWidth() - 250, GetScreenHeight() - 300), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(250, 300), ImGuiCond_Always);
+
+    ImGui::Begin("Inventory");
+
+    for (const auto &[type, amount]: gameData.player.inventory.minedOres) {
+        ImGui::Text("%s: %d", getBlockName(type), amount);
+    }
+    ImGui::End();
+
+    //Base storage window
+    if (gameData.activeMap == &gameData.baseMap) {
+        ImGui::SetNextWindowPos(ImVec2(GetScreenWidth() - 250, 0), ImGuiCond_Always);
+        ImGui::SetNextWindowSize(ImVec2(250, 300), ImGuiCond_Always);
+
+        ImGui::Begin("Storage");
+
+        for (const auto &[type, amount]: storage.storedOres) {
+            ImGui::Text("%s: %d", getBlockName(type), amount);
+        }
+
+        ImGui::End();
+    }
 
 #pragma endregion
 

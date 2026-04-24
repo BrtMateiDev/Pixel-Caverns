@@ -1,5 +1,7 @@
 Changes:
-- Solved the following bugs when in the base:
-    * physics being calculated for the old map
-    * entities being active and rendered
-    * being able to break/place invisible blocks
+- Added player inventory
+- Added base storage
+- Expanded ImGui functions
+- Block drop files have been deleted (no longer needed)
+
+Note: Storage only works for the current session
