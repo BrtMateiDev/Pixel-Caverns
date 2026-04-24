@@ -1,3 +1,5 @@
 Changes:
-- Created a second map for the player base (just functionality, not design)
-Note: I've only done the rendering for now, all physics functions are still processed on the main map.
+- Solved the following bugs when in the base:
+    * physics being calculated for the old map
+    * entities being active and rendered
+    * being able to break/place invisible blocks

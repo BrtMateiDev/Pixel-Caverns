@@ -29,6 +29,7 @@ struct GameData {
     Player player;
 
     EntityHolder entities;
+    EntityHolder *activeEntities = nullptr;
 } gameData;
 
 AssetManager assetManager;
@@ -62,6 +63,7 @@ bool initGame() {
     generatePlayerBase(gameData.baseMap);
 
     gameData.activeMap = &gameData.worldMap;
+    gameData.activeEntities = &gameData.entities;
 
     gameData.camera.target = {20.f, 120.f};
     gameData.camera.rotation = 0.0f;
@@ -85,9 +87,9 @@ bool updateGame() {
 
 #pragma region player movement
     static float PLAYER_SPEED = 10;
-    if (IsKeyDown(KEY_W)) gameData.player.physics.transform.pos.y -= PLAYER_SPEED * dt;
+    //if (IsKeyDown(KEY_W)) gameData.player.physics.transform.pos.y -= PLAYER_SPEED * dt;
     if (IsKeyDown(KEY_A)) gameData.player.physics.transform.pos.x -= PLAYER_SPEED * dt;
-    if (IsKeyDown(KEY_S)) gameData.player.physics.transform.pos.y += PLAYER_SPEED * dt;
+    //if (IsKeyDown(KEY_S)) gameData.player.physics.transform.pos.y += PLAYER_SPEED * dt;
     if (IsKeyDown(KEY_D)) gameData.player.physics.transform.pos.x += PLAYER_SPEED * dt;
 
     if (IsKeyDown(KEY_SPACE)) gameData.player.physics.jump(10);
@@ -97,35 +99,38 @@ bool updateGame() {
     //player
     gameData.player.physics.applyGravity();
     gameData.player.physics.updateForces(dt);
-    gameData.player.physics.resolveConstraints(gameData.worldMap);
+    gameData.player.physics.resolveConstraints(*gameData.activeMap);
     gameData.camera.target = gameData.player.physics.transform.pos;
     gameData.player.physics.updateFinal();
 
     //entities
-    std::ranlux24_base rng(std::random_device{}());
+    if (gameData.activeEntities) {
+        std::ranlux24_base rng(std::random_device{}());
 
-    for (auto it = gameData.entities.entities.begin(); it != gameData.entities.entities.end();) {
-        EntityUpdateData updateData{
-            gameData.player.getPosition(),
-            rng,
-            gameData.entities,
-            it->first
-        };
+        for (auto it = gameData.entities.entities.begin(); it != gameData.entities.entities.end();) {
+            EntityUpdateData updateData{
+                gameData.player.getPosition(),
+                rng,
+                gameData.entities,
+                it->first
+            };
 
-        bool shouldKill = false;
+            bool shouldKill = false;
 
-        if (!it->second->update(dt, updateData) || it->second->life <= 0) shouldKill = true;
+            if (!it->second->update(dt, updateData) || it->second->life <= 0) shouldKill = true;
 
-        if (shouldKill) it = gameData.entities.entities.erase(it); //returns the next valid iterator
-        else {
-            it->second->physics.applyGravity();
-            it->second->physics.updateForces(dt);
-            it->second->physics.resolveConstraints(gameData.worldMap);
-            it->second->physics.updateFinal();
+            if (shouldKill) it = gameData.entities.entities.erase(it); //returns the next valid iterator
+            else {
+                it->second->physics.applyGravity();
+                it->second->physics.updateForces(dt);
+                it->second->physics.resolveConstraints(*gameData.activeMap);
+                it->second->physics.updateFinal();
 
-            ++it;
+                ++it;
+            }
         }
     }
+
 #pragma endregion
 
 #pragma region mouse and keyboard actions
@@ -149,20 +154,22 @@ bool updateGame() {
             return true;
         return false;
     };
+    if (gameData.activeEntities) {
+        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && boundCheck(blockX, blockY)) {
+            auto b = gameData.worldMap.getBlockSafe(blockX, blockY);
+            if (b) {
+                //0.5 for the middle of the block
+                if (b->type) spawnDroppedItem({(float) blockX + 0.5f, (float) blockY + 0.5f}, b->type);
+                *b = {};
+            }
+        }
 
-    if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && boundCheck(blockX, blockY)) {
-        auto b = gameData.worldMap.getBlockSafe(blockX, blockY);
-        if (b) {
-            //0.5 for the middle of the block
-            if (b->type) spawnDroppedItem({(float) blockX + 0.5f, (float) blockY + 0.5f}, b->type);
-            *b = {};
+        if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT) && boundCheck(blockX, blockY)) {
+            auto b = gameData.worldMap.getBlockSafe(blockX, blockY);
+            if (b) b->type = gameData.creativeSelectedBlock;
         }
     }
 
-    if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT) && boundCheck(blockX, blockY)) {
-        auto b = gameData.worldMap.getBlockSafe(blockX, blockY);
-        if (b) b->type = gameData.creativeSelectedBlock;
-    }
 #pragma endregion
 
     BeginMode2D(gameData.camera);
@@ -204,8 +211,9 @@ bool updateGame() {
 #pragma endregion
 
 #pragma region drawing entities
-    for (auto &e: gameData.entities.entities)
-        e.second->render(assetManager);
+    if (gameData.activeEntities)
+        for (auto &e: gameData.entities.entities)
+            e.second->render(assetManager);
 
 #pragma endregion
 
@@ -217,7 +225,7 @@ bool updateGame() {
 #pragma endregion
 
 #pragma region visualizing block selection
-    if (boundCheck(blockX, blockY))
+    if (boundCheck(blockX, blockY) && gameData.activeEntities)
         DrawTexturePro(
             assetManager.frame,
             {0, 0, (float) assetManager.frame.width, (float) assetManager.frame.height},
@@ -236,22 +244,25 @@ bool updateGame() {
 
     ImGui::SliderFloat("Camera zoom", &gameData.camera.zoom, 1, 175);
     ImGui::SliderFloat("Player speed", &PLAYER_SPEED, 5, 100);
-    if (ImGui::Button("Spawn Slime")) spawnSlime({40, 0});
-    if (ImGui::Button("Hurt a Slime")) {
-        for (auto &e: gameData.entities.entities) {
-            if (e.second->getEntityType() == EntityType_Slime) {
-                e.second->life -= 3;
-                break;
+    if (gameData.activeEntities) {
+        if (ImGui::Button("Spawn Slime")) spawnSlime({40, 0});
+        if (ImGui::Button("Hurt a Slime")) {
+            for (auto &e: gameData.entities.entities) {
+                if (e.second->getEntityType() == EntityType_Slime) {
+                    e.second->life -= 3;
+                    break;
+                }
             }
         }
     }
-
     if (ImGui::Button("Teleport to base")) {
         gameData.activeMap = &gameData.baseMap;
+        gameData.activeEntities = nullptr;
         gameData.player.teleport({5, 2});
     }
     if (ImGui::Button("Teleport to mine")) {
         gameData.activeMap = &gameData.worldMap;
+        gameData.activeEntities = &gameData.entities;
         gameData.player.teleport({20, 10});
     }
 
