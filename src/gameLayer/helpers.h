@@ -3,11 +3,22 @@
 
 #pragma once
 #include <raylib.h>
+#include <cstdint>
+
+#include "blocks.h"
 #include "physics.h"
 
 inline constexpr float pixel = 1.f / 32.f;
 
 struct AssetManager;
+
+//Combining two 32-bit numbers into a 64-bit number
+inline uint64_t getCoordinateKey(int x, int y) {
+    //using static_cast to take away the sign for negative numbers (NOT equal to positive)
+    uint64_t alt_x = static_cast<uint32_t>(x);
+    uint64_t alt_y = static_cast<uint32_t>(y);
+    return (alt_x << 32) | alt_y;
+}
 
 inline const char *getBlockName(unsigned short int type) {
     static const char *blockNames[] = {

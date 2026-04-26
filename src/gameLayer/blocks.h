@@ -5,8 +5,7 @@
 #include <cstdint>
 
 struct Block {
-    enum
-    {
+    enum {
         air,
         dirt,
         grassBlock,
@@ -65,10 +64,10 @@ struct Block {
         BLOCKS_COUNT,
     };
 
-    std::uint16_t type=0; //each block will be represented by a 16-bit number
+    std::uint16_t type = 0; //each block will be represented by a 16-bit number
 
     void sanitize() {
-        if (type>=BLOCKS_COUNT) type=0;
+        if (type >= BLOCKS_COUNT) type = 0;
     }
 
     bool isCollidable() {

@@ -4,6 +4,8 @@
 #pragma once
 #include <unordered_map>
 #include <raylib.h>
+
+#include "blocks.h"
 #include "physics.h"
 #include "entity.h"
 

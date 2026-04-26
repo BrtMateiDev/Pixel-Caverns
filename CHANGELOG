@@ -1,7 +1,5 @@
 Changes:
-- Added player inventory
-- Added base storage
-- Expanded ImGui functions
-- Block drop files have been deleted (no longer needed)
+- Completely overhauled the map generation, now blocks are generated in memory when in sight of the player.
+- Major refactorizations in the code to permit this change
 
-Note: Storage only works for the current session
+Note: This overhaul isn't complete yet and still needs changes.

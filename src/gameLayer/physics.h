@@ -4,7 +4,6 @@
 #pragma once
 #include <raylib.h>
 #include <raymath.h>
-#include "gameMap.h"
 
 #pragma region Defining vector operations
 //This is function overloading

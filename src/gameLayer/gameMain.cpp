@@ -5,7 +5,6 @@
 #include <cmath>
 #include "gameMain.h"
 #include "assetManager.h"
-#include "gameMap.h"
 #include "helpers.h"
 #include "worldGenerator.h"
 #include "physics.h"
@@ -48,7 +47,10 @@ void spawnSlime(Vector2 position) {
 bool initGame() {
     assetManager.loadAll();
 
-    generateWorld(gameData.worldMap, 1);
+    oracle.init(1);
+    gameData.worldMap.usesOracle = true;
+    gameData.baseMap.usesOracle = false; //Turning off the generation for the base
+
     generatePlayerBase(gameData.baseMap);
 
     gameData.activeMap = &gameData.worldMap;
@@ -137,24 +139,18 @@ bool updateGame() {
     int blockX = floor(worldPos.x);
     int blockY = floor(worldPos.y);
 
-    //This lamba function is for not accessing things out of bounds
-    auto boundCheck = [](int x, int y) {
-        if (x >= 0 && x < gameData.activeMap->w && y >= 0 && y < gameData.activeMap->h)
-            return true;
-        return false;
-    };
     if (gameData.activeMap == &gameData.worldMap) {
-        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && boundCheck(blockX, blockY)) {
-            auto b = gameData.worldMap.getBlockSafe(blockX, blockY);
-            if (b->type) {
-                gameData.player.inventory.mineOre(b);
-                *b = {};
+        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+            auto &b = gameData.worldMap.getBlock(blockX, blockY);
+            if (b.type) {
+                gameData.player.inventory.mineOre(&b);
+                b.type = Block::air;
             }
         }
 
-        if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT) && boundCheck(blockX, blockY)) {
-            auto b = gameData.worldMap.getBlockSafe(blockX, blockY);
-            if (b) b->type = gameData.creativeSelectedBlock;
+        if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
+            auto &b = gameData.worldMap.getBlock(blockX, blockY);
+            b.type = gameData.creativeSelectedBlock;
         }
     }
 
@@ -172,28 +168,21 @@ bool updateGame() {
     int startYView = (int) floorf(topLeftView.y - 1);
     int endYView = (int) ceilf(bottomRightView.y + 1);
 
-    //Clamp means the variable can't have a value outside those bounds
-    startXView = Clamp(startXView, 0, (float) gameData.worldMap.w - 1);
-    endXView = Clamp(endXView, 0, (float) gameData.worldMap.w - 1);
-    startYView = Clamp(startYView, 0, (float) gameData.worldMap.h - 1);
-    endYView = Clamp(endYView, 0, (float) gameData.worldMap.h - 1);
 #pragma endregion
 
 #pragma region drawing the map
     for (int y = startYView; y <= endYView; ++y)
         for (int x = startXView; x <= endXView; ++x) {
-            if (boundCheck(x, y)) {
-                auto &b = gameData.activeMap->getBlockUnsafe(x, y);
-                if (b.type != Block::air) {
-                    DrawTexturePro(
-                        assetManager.textures,
-                        getTextureAtlas(b.type, 0, 32, 32),
-                        {(float) x, (float) y, 1, 1},
-                        {0, 0},
-                        0.0f,
-                        WHITE
-                    );
-                }
+            auto &b = gameData.activeMap->getBlock(x, y);
+            if (b.type != Block::air) {
+                DrawTexturePro(
+                    assetManager.textures,
+                    getTextureAtlas(b.type, 0, 32, 32),
+                    {(float) x, (float) y, 1, 1},
+                    {0, 0},
+                    0.0f,
+                    WHITE
+                );
             }
         }
 #pragma endregion
@@ -213,7 +202,7 @@ bool updateGame() {
 #pragma endregion
 
 #pragma region visualizing block selection
-    if (boundCheck(blockX, blockY) && gameData.activeEntities)
+    if (gameData.activeMap == &gameData.worldMap)
         DrawTexturePro(
             assetManager.frame,
             {0, 0, (float) assetManager.frame.width, (float) assetManager.frame.height},

@@ -1,5 +1,5 @@
 #include "physics.h"
-#include "gameMap.h"
+#include "worldGenerator.h"
 #include <raymath.h>
 
 void PhysicalEntity::resolveConstraints(GameMap &mapData) {
@@ -39,12 +39,6 @@ void PhysicalEntity::resolveConstraints(GameMap &mapData) {
     }
 end:
     //Restrict the player from going outside of bounds/falling through the map
-    if (pos.x - transform.w / 2 < 0) pos.x = transform.w / 2;
-    if (pos.x + transform.w / 2 > mapData.w) pos.x = mapData.w - transform.w / 2;
-    if (pos.y + transform.h / 2 > mapData.h) {
-        pos.y = mapData.h - transform.h / 2;
-        downTouch = true; //experimental
-    }
 
     //Prevention for gaining velocity when standing on a block
     if (leftTouch && velocity.x < 0) velocity.x = 0;
@@ -71,21 +65,15 @@ Vector2 PhysicalEntity::performCollisionOnOneAxis(GameMap &mapData, Vector2 pos,
     //The actual hitbox checks will be performed around the player, not the entire map
     Vector2 dimensions = {transform.w, transform.h};
 
-    int minX = floor(pos.x - dimensions.x / 2.f - 1);
-    int maxX = ceil(pos.x + dimensions.x / 2.f + 1);
-    int minY = floor(pos.y - dimensions.y / 2.f - 1);
-    int maxY = ceil(pos.y + dimensions.y / 2.f + 1);
-
-    //Making sure the values are within the map;
-    minX = std::max(0, minX);
-    minY = std::max(0, minY);
-    maxX = std::min(mapData.w, maxX);
-    maxY = std::min(mapData.h, maxY);
+    int minX = (int) floorf(pos.x - dimensions.x / 2.f - 1);
+    int maxX = (int) ceilf(pos.x + dimensions.x / 2.f + 1);
+    int minY = (int) floorf(pos.y - dimensions.y / 2.f - 1);
+    int maxY = (int) ceilf(pos.y + dimensions.y / 2.f + 1);
 
     //Checking the nearby area for collisions
     for (int y = minY; y < maxY; ++y)
         for (int x = minX; x < maxX; ++x)
-            if (mapData.getBlockUnsafe(x, y).isCollidable()) {
+            if (mapData.getBlock(x, y).isCollidable()) {
                 Transform2D entity;
                 entity.pos = pos;
                 entity.w = dimensions.x;
