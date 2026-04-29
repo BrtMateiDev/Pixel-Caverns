@@ -8,9 +8,20 @@
 #include "blocks.h"
 #include "physics.h"
 
-inline constexpr float pixel = 1.f / 32.f;
+inline constexpr float BLOCK_SIZE = 64.f;
+inline constexpr float TEXTURE_TILE_SIZE = 64.f;
+inline constexpr float PIXEL = 1.f / BLOCK_SIZE;
 
 struct AssetManager;
+
+inline Rectangle shrinkUV(Rectangle in, float shrink = 0.1) {
+    in.width -= shrink;
+    in.height -= shrink;
+    in.x += shrink / 2.f;
+    in.y += shrink / 2.f;
+
+    return in;
+}
 
 //Combining two 32-bit numbers into a 64-bit number
 inline uint64_t getCoordinateKey(int x, int y) {
@@ -22,14 +33,7 @@ inline uint64_t getCoordinateKey(int x, int y) {
 
 inline const char *getBlockName(unsigned short int type) {
     static const char *blockNames[] = {
-        "Air", "Dirt", "Grass Block", "Stone", "Grass", "Sand", "Sand Ruby", "Sand Stone",
-        "Wood Plank", "Stone Bricks", "Clay", "Wood Log", "Leaves", "Copper Ore", "Iron Ore", "Gold Ore",
-        "Copper Block", "Iron Block", "Gold Block", "Bricks", "Snow", "Ice", "Ruby Block", "Platform",
-        "Workbench", "Glass", "Furnace", "Painting", "Sapling", "Snow Blue Ruby", "Blue Ruby Block",
-        "Door", "Jar", "Table", "Wardrobe", "Bookshelf", "Snow Bricks", "Ice Table", "Ice Wardrobe",
-        "Ice Bookshelf", "Ice Platform", "Sand Table", "Sand Wardrobe", "Sand Bookshelf", "Sand Platform",
-        "Wooden Chest", "Ice Chest", "Sand Chest", "Bone Chest", "Bone Bricks", "Bone Bench",
-        "Bone Wardrobe", "Bone Bookshelf", "Bone Platform"
+        "Air", "Stone", "Dirt", "Grass", "PLACEHOLDER"
     };
 
     if (type >= 0 && type < Block::BLOCKS_COUNT) return blockNames[type];
@@ -37,9 +41,9 @@ inline const char *getBlockName(unsigned short int type) {
 }
 
 inline Rectangle getTextureAtlas(int x, int y, int cellSizePixelsX, int cellSizePixelsY) {
-    return Rectangle{
+    return shrinkUV(Rectangle{
         (float) x * cellSizePixelsX, (float) y * cellSizePixelsY, (float) cellSizePixelsX, (float) cellSizePixelsY
-    };
+    });
 }
 
 inline Rectangle getRectangleForEntity(Transform2D transform, float textureW, float textureH) {

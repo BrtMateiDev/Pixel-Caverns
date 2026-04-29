@@ -25,6 +25,16 @@ inline uint32_t calculateHash(int x, int y, int seed) {
     return hash ^ (hash >> 16); //Folding the bits over themselves
 }
 
+struct Chunk {
+    static constexpr int SIZE = 32; //1024
+    Block blocks[SIZE][SIZE];
+    bool generated = false;
+
+    Block &getBlockRelative(int x, int y) {
+        return blocks[y][x];
+    }
+};
+
 inline class GenerationOracle {
     FastNoiseLite noise;
     int worldSeed{};
@@ -34,10 +44,10 @@ inline class GenerationOracle {
         uint32_t chance = hash % 1000;
 
         //PLACEHOLDERS
-        if (chance == 0) return Block::rubyBlock; // 1 in 1000 (0.1%)
-        if (chance < 5) return Block::goldBlock; // 4 in 1000 (0.4%)
-        if (chance < 20) return Block::ironBlock; // 15 in 1000 (1.5%)
-        if (chance < 60) return Block::copperBlock; // 40 in 1000 (4.0%)
+        if (chance == 0) return Block::PLACEHOLDER; // 1 in 1000 (0.1%)
+        if (chance < 5) return Block::PLACEHOLDER; // 4 in 1000 (0.4%)
+        if (chance < 20) return Block::PLACEHOLDER; // 15 in 1000 (1.5%)
+        if (chance < 60) return Block::PLACEHOLDER; // 40 in 1000 (4.0%)
 
         return Block::stone;
     }
@@ -54,7 +64,7 @@ public:
     unsigned short int getBlockAt(int x, int y) {
         //TODO: FINISH DESIGNING THE HARCODED SURFACE
         if (y < 0) return Block::air;
-        if (y == 0) return Block::grassBlock;
+        if (y == 0) return Block::grass;
         if (y < 10) return Block::dirt;
 
         float noiseValue = noise.GetNoise((float) x, (float) y);
@@ -79,20 +89,42 @@ struct GameMap {
 
     bool usesOracle = false;
 
-    std::unordered_map<uint64_t, Block> mapData;
+    std::unordered_map<uint64_t, Chunk *> mapData;
+
+    //~ means deconstructor
+    ~GameMap() {
+        for (auto &pair: mapData) {
+            delete pair.second;
+        }
+    }
 
     Block &getBlock(int x, int y) {
-        uint64_t key = getCoordinateKey(x, y);
+        //Chunk coordinates
+        int cx = floor((float) x / Chunk::SIZE);
+        int cy = floor((float) y / Chunk::SIZE);
+        uint64_t key = getCoordinateKey(cx, cy);
 
-        //If the key doesn't exist, then create it
         if (mapData.find(key) == mapData.end()) {
-            if (usesOracle)
-                mapData[key].type = oracle.getBlockAt(x, y);
-            else
-                mapData[key].type = Block::air; //for the base map
-        }
+            Chunk *newChunk = new Chunk();
 
-        return mapData[key];
+            for (int dy = 0; dy < Chunk::SIZE; ++dy) {
+                for (int dx = 0; dx < Chunk::SIZE; ++dx) {
+                    //Getting the global world position
+                    int wx = cx * Chunk::SIZE + dx;
+                    int wy = cy * Chunk::SIZE + dy;
+
+                    if (usesOracle)
+                        newChunk->blocks[dy][dx].type = oracle.getBlockAt(wx, wy);
+                    else
+                        newChunk->blocks[dy][dx].type = Block::air;
+                }
+            }
+            mapData[key] = newChunk;
+        }
+        int dx = ((x % Chunk::SIZE) + Chunk::SIZE) % Chunk::SIZE;
+        int dy = ((y % Chunk::SIZE) + Chunk::SIZE) % Chunk::SIZE;
+
+        return mapData[key]->getBlockRelative(dx, dy);
     }
 };
 

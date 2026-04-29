@@ -5,13 +5,13 @@
 
 void Player::render_tail(AssetManager &assetManager) {
     auto c = physics.transform.getBottomLeft();
-    c.x -= 11 * pixel;
-    c.y -= 9 * pixel;
+    c.x -= 11 * PIXEL;
+    c.y -= 9 * PIXEL;
 
     DrawTexturePro(
         assetManager.tail, //texture
         {0, 0, (float) assetManager.tail.width, (float) assetManager.tail.height}, //source
-        {c.x, c.y, 17 * pixel, 9 * pixel}, //destination
+        {c.x, c.y, 17 * PIXEL, 9 * PIXEL}, //destination
         {0, 0}, //origin
         0.0f, //rotation
         WHITE //tint

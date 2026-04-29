@@ -1,5 +1,8 @@
 Changes:
-- Completely overhauled the map generation, now blocks are generated in memory when in sight of the player.
-- Major refactorizations in the code to permit this change
+- New chunk based memory handling
+- Blocks are now 64x64 pixels in size
+- Replaced all textures (besides the slime sprites)
+- Plenty of code refactoring and new functions
+- Fixed a horrible memory leak bug that was permanent (up to 10 gb of frozen ram, ouch)
 
-Note: This overhaul isn't complete yet and still needs changes.
+Shoutout to my cousin for helping with the new textures! They made the grass and dirt textures. You can check them out at @4-wind on tumblr!

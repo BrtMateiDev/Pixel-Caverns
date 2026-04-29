@@ -28,6 +28,11 @@ int main() {
 		ClearBackground(BLACK);
 		rlImGuiBegin();
 
+		//This disables the generation of ImGui.ini and in-game dragging
+		ImGui::CreateContext();
+		ImGuiIO &io = ImGui::GetIO();
+		io.IniFilename = nullptr;
+
 #pragma region imgui_docking
 		/*
 		 ==DISABLED==

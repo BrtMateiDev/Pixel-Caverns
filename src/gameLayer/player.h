@@ -8,13 +8,17 @@
 #include "blocks.h"
 #include "physics.h"
 #include "entity.h"
+#include "helpers.h"
 
 struct AssetManager;
 
 struct Player : public Entity {
+    static constexpr int SPRITE_W = 45;
+    static constexpr int SPRITE_H = 36;
+
     Player() {
-        physics.transform.w = 1.40625f;
-        physics.transform.h = 1.125f;
+        physics.transform.w = SPRITE_W * PIXEL;
+        physics.transform.h = SPRITE_H * PIXEL;
 
         inventory.minedOres = {};
 

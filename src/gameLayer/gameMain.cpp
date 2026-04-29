@@ -20,7 +20,7 @@ struct GameData {
 
     Camera2D camera = {};
 
-    int creativeSelectedBlock = Block::dirt;
+    int creativeSelectedBlock = Block::stone;
 
     Vector2 selectionStart = {};
     Vector2 selectionEnd = {};
@@ -61,8 +61,8 @@ bool initGame() {
     gameData.camera.zoom = 100.0f;
 
     gameData.player.teleport({20, 0});
-    gameData.player.physics.transform.w = assetManager.player.width * pixel;
-    gameData.player.physics.transform.h = assetManager.player.height * pixel;
+    gameData.player.physics.transform.w = assetManager.player.width * PIXEL;
+    gameData.player.physics.transform.h = assetManager.player.height * PIXEL;
 
     return true;
 }
@@ -177,7 +177,7 @@ bool updateGame() {
             if (b.type != Block::air) {
                 DrawTexturePro(
                     assetManager.textures,
-                    getTextureAtlas(b.type, 0, 32, 32),
+                    getTextureAtlas(b.type, 0, TEXTURE_TILE_SIZE, TEXTURE_TILE_SIZE),
                     {(float) x, (float) y, 1, 1},
                     {0, 0},
                     0.0f,
@@ -197,6 +197,7 @@ bool updateGame() {
 #pragma region drawing the player
     gameData.player.render_tail(assetManager);
     gameData.player.render(assetManager);
+
     //Drawing the player's hitbox
     //DrawRectangleLinesEx(gameData.player.physics.transform.getAABB(), 0.1, {20, 101, 250, 120});
 #pragma endregion
@@ -204,8 +205,8 @@ bool updateGame() {
 #pragma region visualizing block selection
     if (gameData.activeMap == &gameData.worldMap)
         DrawTexturePro(
-            assetManager.frame,
-            {0, 0, (float) assetManager.frame.width, (float) assetManager.frame.height},
+            assetManager.selection,
+            {0, 0, TEXTURE_TILE_SIZE, TEXTURE_TILE_SIZE},
             {(float) blockX, (float) blockY, 1, 1},
             {0, 0},
             0.f,
@@ -216,16 +217,13 @@ bool updateGame() {
     EndMode2D();
 
 #pragma region imgui_windows
-    //This disables the generation of ImGui.ini and in-game dragging
-    ImGui::CreateContext();
-    ImGuiIO &io = ImGui::GetIO();
-    io.IniFilename = nullptr;
+
     ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
     ImGui::SetNextWindowSize(ImVec2(300, 200), ImGuiCond_Always);
 
     ImGui::Begin("Dev tools");
 
-    ImGui::SliderFloat("Camera zoom", &gameData.camera.zoom, 1, 175);
+    ImGui::SliderFloat("Camera zoom", &gameData.camera.zoom, 5, 250);
     ImGui::SliderFloat("Player speed", &PLAYER_SPEED, 5, 100);
     if (gameData.activeEntities) {
         if (ImGui::Button("Spawn Slime")) spawnSlime({40, 0});
