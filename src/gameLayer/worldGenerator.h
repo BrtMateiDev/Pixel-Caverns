@@ -4,9 +4,24 @@
 #pragma once
 #include <FastNoiseLite.h>
 #include <unordered_map>
+#include <vector>
+#include <algorithm>
 #include <cstdint>
 #include "blocks.h"
 #include "helpers.h"
+
+struct OreRule {
+    unsigned short int blockType;
+    uint32_t chance; //10 means 1% chance
+};
+
+struct LayerDef {
+    int minDepth;
+    int maxDepth;
+    unsigned short int baseBlock;
+    float caveThreshold;
+    std::vector<OreRule> ores;
+};
 
 //Hash function used for the calculateOre function below
 //Also, uint32_t safely handles overflows
@@ -26,7 +41,7 @@ inline uint32_t calculateHash(int x, int y, int seed) {
 }
 
 struct Chunk {
-    static constexpr int SIZE = 32; //1024
+    static constexpr int SIZE = 32; //1024 blocks per chunk
     Block blocks[SIZE][SIZE];
     bool generated = false;
 
@@ -39,17 +54,23 @@ inline class GenerationOracle {
     FastNoiseLite noise;
     int worldSeed{};
 
-    unsigned short int calculateOre(int x, int y) {
+    std::vector<LayerDef> layers;
+
+    const LayerDef *getLayerAt(int y) {
+        for (const auto &layer: layers) {
+            if (y >= layer.minDepth && y <= layer.maxDepth) return &layer;
+        }
+        return nullptr;
+    }
+
+    unsigned short int calculateOre(int x, int y, const LayerDef &layer) {
         uint32_t hash = calculateHash(x, y, worldSeed);
         uint32_t chance = hash % 1000;
 
-        //PLACEHOLDERS
-        if (chance == 0) return Block::PLACEHOLDER; // 1 in 1000 (0.1%)
-        if (chance < 5) return Block::PLACEHOLDER; // 4 in 1000 (0.4%)
-        if (chance < 20) return Block::PLACEHOLDER; // 15 in 1000 (1.5%)
-        if (chance < 60) return Block::PLACEHOLDER; // 40 in 1000 (4.0%)
-
-        return Block::stone;
+        for (const auto &ore: layer.ores) {
+            if (chance < ore.chance) return ore.blockType;
+        }
+        return layer.baseBlock;
     }
 
 public:
@@ -59,27 +80,32 @@ public:
         noise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
         noise.SetSeed(seed);
         noise.SetFrequency(0.015f);
+
+        // Layer 0: Surface (0 to 20)
+        layers.push_back({0, 0, Block::grass, -1.f, {}});
+        layers.push_back({1, 20, Block::dirt, -1.f, {}});
+
+        // Layer 1: Stone Layer (21 to 100)
+        layers.push_back({
+            21, 100, Block::stone, -0.4f, {
+                {Block::PLACEHOLDER, 50}, //Ores will go here soon
+            }
+        });
     }
 
     unsigned short int getBlockAt(int x, int y) {
-        //TODO: FINISH DESIGNING THE HARCODED SURFACE
         if (y < 0) return Block::air;
-        if (y == 0) return Block::grass;
-        if (y < 10) return Block::dirt;
 
+        const LayerDef *layer = getLayerAt(y);
+        if (!layer) return Block::stone;
+
+        // Cave generation logic
         float noiseValue = noise.GetNoise((float) x, (float) y);
-        float threshold = -0.5f; //ARBITRARY
-
-        if (noiseValue <= threshold) {
+        if (noiseValue <= layer->caveThreshold) {
             return Block::air;
         }
 
-        unsigned short int oreResult = calculateOre(x, y);
-        if (oreResult != Block::stone) {
-            return oreResult;
-        }
-
-        return Block::stone;
+        return calculateOre(x, y, *layer);
     }
 } oracle;
 

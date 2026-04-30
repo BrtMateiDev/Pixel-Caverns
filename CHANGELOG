@@ -1,8 +1,2 @@
 Changes:
-- New chunk based memory handling
-- Blocks are now 64x64 pixels in size
-- Replaced all textures (besides the slime sprites)
-- Plenty of code refactoring and new functions
-- Fixed a horrible memory leak bug that was permanent (up to 10 gb of frozen ram, ouch)
-
-Shoutout to my cousin for helping with the new textures! They made the grass and dirt textures. You can check them out at @4-wind on tumblr!
+- Starting to implement layers

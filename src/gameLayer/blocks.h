@@ -24,8 +24,7 @@ struct Block {
     bool isCollidable() {
         switch (type) {
             case air:
-                //case stoneBG:
-                //case dirtBG:
+                //case [NAME]_bg;
                 return false;
             default:
                 return true;
