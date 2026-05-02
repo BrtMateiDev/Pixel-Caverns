@@ -1,14 +1,11 @@
 #include <raylib.h>
-#include <raymath.h>
 #include <imgui.h>
-#include <fstream>
 #include <cmath>
 #include "gameMain.h"
 #include "assetManager.h"
 #include "helpers.h"
 #include "worldGenerator.h"
 #include "physics.h"
-#include "entities/slime.h"
 #include "entityIdHolder.h"
 #include "player.h"
 #include "playerBase/storage.h"
@@ -20,31 +17,25 @@ struct GameData {
 
     Camera2D camera = {};
 
-    int creativeSelectedBlock = Block::stone;
+    int creativeSelectedBlock = Block::stone_shallow;
 
     Vector2 selectionStart = {};
     Vector2 selectionEnd = {};
 
     Player player;
 
-    EntityHolder entities;
-    EntityHolder *activeEntities = nullptr;
+    float miningProgress = 0;
+    int lastMinedX = -1;
+    int lastMinedY = -1;
+
+    //EntityHolder entities;
+    //EntityHolder *activeEntities = nullptr;
 } gameData;
 
 AssetManager assetManager;
 
-//functions for spawning
-void spawnSlime(Vector2 position) {
-    Slime slime;
-
-    slime.physics.teleport(position);
-
-    auto id = gameData.entities.idHolder.getEntityIdAndIncrement();
-
-    gameData.entities.entities[id] = std::make_unique<Slime>(slime); //syntax for the usage of unique (smart) pointers
-}
-
 bool initGame() {
+    initBlockRegistry();
     assetManager.loadAll();
 
     oracle.init(1);
@@ -54,11 +45,10 @@ bool initGame() {
     generatePlayerBase(gameData.baseMap);
 
     gameData.activeMap = &gameData.worldMap;
-    gameData.activeEntities = &gameData.entities;
 
     gameData.camera.target = {20.f, 120.f};
     gameData.camera.rotation = 0.0f;
-    gameData.camera.zoom = 100.0f;
+    gameData.camera.zoom = 200.0f;
 
     gameData.player.teleport({20, 0});
     gameData.player.physics.transform.w = assetManager.player.width * PIXEL;
@@ -86,41 +76,13 @@ bool updateGame() {
     if (IsKeyDown(KEY_SPACE)) gameData.player.physics.jump(10);
 #pragma endregion
 
-#pragma region entities
+#pragma region updating physics
     //player
     gameData.player.physics.applyGravity();
     gameData.player.physics.updateForces(dt);
     gameData.player.physics.resolveConstraints(*gameData.activeMap);
     gameData.camera.target = gameData.player.physics.transform.pos;
     gameData.player.physics.updateFinal();
-
-    //entities
-    if (gameData.activeEntities) {
-        std::ranlux24_base rng(std::random_device{}());
-
-        for (auto it = gameData.entities.entities.begin(); it != gameData.entities.entities.end();) {
-            EntityUpdateData updateData{
-                gameData.player.getPosition(),
-                rng,
-                gameData.entities,
-                it->first
-            };
-
-            bool shouldKill = false;
-
-            if (!it->second->update(dt, updateData) || it->second->life <= 0) shouldKill = true;
-
-            if (shouldKill) it = gameData.entities.entities.erase(it); //returns the next valid iterator
-            else {
-                it->second->physics.applyGravity();
-                it->second->physics.updateForces(dt);
-                it->second->physics.resolveConstraints(*gameData.activeMap);
-                it->second->physics.updateFinal();
-
-                ++it;
-            }
-        }
-    }
 
 #pragma endregion
 
@@ -131,7 +93,7 @@ bool updateGame() {
     }
     if (IsKeyPressed(KEY_EQUAL)) {
         gameData.creativeSelectedBlock++;
-        if (gameData.creativeSelectedBlock >= Block::BLOCKS_COUNT) gameData.creativeSelectedBlock = 1;
+        if (gameData.creativeSelectedBlock >= Block::BLOCKS_COUNT - 2) gameData.creativeSelectedBlock = 1;
     }
 
     Vector2 worldPos = GetScreenToWorld2D(GetMousePosition(), gameData.camera);;
@@ -139,16 +101,44 @@ bool updateGame() {
     int blockX = floor(worldPos.x);
     int blockY = floor(worldPos.y);
 
+    float distance = Vector2Distance(gameData.player.physics.transform.pos, {blockX + 0.5f, blockY + 0.5f});
+    bool inRange = distance <= 2.5f;
+    // A distance of 2.5 covers exactly the block you are in and the immediately adjacent ones
+
     if (gameData.activeMap == &gameData.worldMap) {
         if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
-            auto &b = gameData.worldMap.getBlock(blockX, blockY);
-            if (b.type) {
-                gameData.player.inventory.mineOre(&b);
-                b.type = Block::air;
+            if (inRange) {
+                auto &b = gameData.worldMap.getBlock(blockX, blockY);
+                if (b.isMineable()) {
+                    // Check if we are mining a new block
+                    if (blockX != gameData.lastMinedX || blockY != gameData.lastMinedY) {
+                        gameData.miningProgress = 0;
+                        gameData.lastMinedX = blockX;
+                        gameData.lastMinedY = blockY;
+                    }
+
+                    gameData.miningProgress += dt * gameData.player.pickaxePower;
+
+                    if (gameData.miningProgress >= b.getDurability()) {
+                        gameData.player.inventory.mineOre(&b);
+                        b.type = Block::air;
+                        gameData.miningProgress = 0;
+                    }
+                }
+            } else {
+                // Reset progress if trying to mine out of range
+                gameData.miningProgress = 0;
+                gameData.lastMinedX = -1;
+                gameData.lastMinedY = -1;
             }
+        } else {
+            // Reset progress if we release the button
+            gameData.miningProgress = 0;
+            gameData.lastMinedX = -1;
+            gameData.lastMinedY = -1;
         }
 
-        if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
+        if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT) && inRange) {
             auto &b = gameData.worldMap.getBlock(blockX, blockY);
             b.type = gameData.creativeSelectedBlock;
         }
@@ -174,11 +164,37 @@ bool updateGame() {
     for (int y = startYView; y <= endYView; ++y)
         for (int x = startXView; x <= endXView; ++x) {
             auto &b = gameData.activeMap->getBlock(x, y);
+            const auto &props = BlockRegistry[b.type];
+            Rectangle destRect = {(float) x, (float) y, 1, 1};
+
+            // 1. Draw background
+            DrawTexturePro(
+                assetManager.textures,
+                getTextureAtlas(b.bgTexture, 1, TEXTURE_TILE_SIZE, TEXTURE_TILE_SIZE),
+                destRect,
+                {0, 0},
+                0.0f,
+                WHITE
+            );
+
+            // 2. Draw foreground
             if (b.type != Block::air) {
                 DrawTexturePro(
                     assetManager.textures,
-                    getTextureAtlas(b.type, 0, TEXTURE_TILE_SIZE, TEXTURE_TILE_SIZE),
-                    {(float) x, (float) y, 1, 1},
+                    getTextureAtlas(props.textureIndex, 0, TEXTURE_TILE_SIZE, TEXTURE_TILE_SIZE),
+                    destRect,
+                    {0, 0},
+                    0.0f,
+                    WHITE
+                );
+            }
+
+            // 3. Draw ore
+            if (props.oreIndex != Ore::none) {
+                DrawTexturePro(
+                    assetManager.textures,
+                    getTextureAtlas(props.oreIndex, 2, TEXTURE_TILE_SIZE, TEXTURE_TILE_SIZE),
+                    destRect,
                     {0, 0},
                     0.0f,
                     WHITE
@@ -187,10 +203,10 @@ bool updateGame() {
         }
 #pragma endregion
 
-#pragma region drawing entities
-    if (gameData.activeEntities)
-        for (auto &e: gameData.entities.entities)
-            e.second->render(assetManager);
+#pragma region drawing entities (DISABLED)
+    // if (gameData.activeEntities)
+    //     for (auto &e: gameData.entities.entities)
+    //         e.second->render(assetManager);
 
 #pragma endregion
 
@@ -202,19 +218,49 @@ bool updateGame() {
     //DrawRectangleLinesEx(gameData.player.physics.transform.getAABB(), 0.1, {20, 101, 250, 120});
 #pragma endregion
 
-#pragma region visualizing block selection
-    if (gameData.activeMap == &gameData.worldMap)
+#pragma region visualizing block selection and mining cracks
+    if (gameData.activeMap == &gameData.worldMap && inRange) {
+        // Draw the main selection highlight
         DrawTexturePro(
-            assetManager.selection,
-            {0, 0, TEXTURE_TILE_SIZE, TEXTURE_TILE_SIZE},
+            assetManager.textures,
+            getTextureAtlas(1, 3, TEXTURE_TILE_SIZE, TEXTURE_TILE_SIZE),
             {(float) blockX, (float) blockY, 1, 1},
             {0, 0},
             0.f,
             WHITE
         );
+
+        // Draw mining cracks if we are currently mining this block
+        if (gameData.lastMinedX == blockX && gameData.lastMinedY == blockY && gameData.miningProgress > 0) {
+            auto &b = gameData.worldMap.getBlock(blockX, blockY);
+            float durability = b.getDurability();
+            if (durability > 0) {
+                int frame = (int) ((gameData.miningProgress / durability) * 4); // 4 frames
+                if (frame > 3) frame = 3;
+
+                DrawTexturePro(
+                    assetManager.textures,
+                    getTextureAtlas(frame, 4, TEXTURE_TILE_SIZE, TEXTURE_TILE_SIZE),
+                    {(float) blockX, (float) blockY, 1, 1},
+                    {0, 0},
+                    0.f,
+                    WHITE
+                );
+            }
+        }
+    }
 #pragma endregion
 
     EndMode2D();
+
+#pragma region HUD
+    // Coordinate System (X: [...]; Y: [...])
+    int playerX = (int) floorf(gameData.player.physics.transform.pos.x);
+    int playerY = (int) floorf(gameData.player.physics.transform.pos.y);
+    const char *coordText = TextFormat("(X: %d; Y: %d)", playerX, playerY);
+    int textWidth = MeasureText(coordText, 40);
+    DrawText(coordText, GetScreenWidth() / 2 - textWidth / 2, 15, 40, RAYWHITE);
+#pragma endregion
 
 #pragma region imgui_windows
 
@@ -225,32 +271,24 @@ bool updateGame() {
 
     ImGui::SliderFloat("Camera zoom", &gameData.camera.zoom, 5, 250);
     ImGui::SliderFloat("Player speed", &PLAYER_SPEED, 5, 100);
-    if (gameData.activeEntities) {
-        if (ImGui::Button("Spawn Slime")) spawnSlime({40, 0});
-        if (ImGui::Button("Hurt a Slime")) {
-            for (auto &e: gameData.entities.entities) {
-                if (e.second->getEntityType() == EntityType_Slime) {
-                    e.second->life -= 3;
-                    break;
-                }
-            }
-        }
-    }
+    ImGui::SliderFloat("Pickaxe power", &gameData.player.pickaxePower, 1, 10);
+
     if (ImGui::Button("Teleport to base")) {
         gameData.activeMap = &gameData.baseMap;
-        gameData.activeEntities = nullptr;
         gameData.player.teleport({5, 2});
+        //gameData.activeEntities = nullptr;
     }
     if (ImGui::Button("Teleport to mine")) {
         gameData.activeMap = &gameData.worldMap;
-        gameData.activeEntities = &gameData.entities;
         gameData.player.teleport({20, 10});
+        //gameData.activeEntities = &gameData.entities;
     }
 
     if (gameData.activeMap == &gameData.baseMap) {
-        ImGui::Separator();
         if (ImGui::Button("Deposit ores")) storage.depositOres(gameData.player.inventory.minedOres);
     }
+
+    ImGui::Text("FPS: %d", GetFPS());
 
     ImGui::TextDisabled("(?)");
     if (ImGui::IsItemHovered()) {
@@ -269,7 +307,7 @@ bool updateGame() {
     ImGui::Begin("Inventory");
 
     for (const auto &[type, amount]: gameData.player.inventory.minedOres) {
-        ImGui::Text("%s: %d", getBlockName(type), amount);
+        ImGui::Text("%s: %d", BlockRegistry[type].name, amount);
     }
     ImGui::End();
 
@@ -281,7 +319,7 @@ bool updateGame() {
         ImGui::Begin("Storage");
 
         for (const auto &[type, amount]: storage.storedOres) {
-            ImGui::Text("%s: %d", getBlockName(type), amount);
+            ImGui::Text("%s: %d", BlockRegistry[type].name, amount);
         }
 
         ImGui::End();
@@ -290,10 +328,4 @@ bool updateGame() {
 #pragma endregion
 
     return true;
-}
-
-void closeGame() {
-    std::ofstream fout("/home/matei/Workspace/C++/Pixel Caverns/resources/crashLogs/" "log.txt");
-    fout << "CLOSED!!";
-    fout.close();
 }

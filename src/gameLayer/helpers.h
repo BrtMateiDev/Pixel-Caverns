@@ -31,15 +31,6 @@ inline uint64_t getCoordinateKey(int x, int y) {
     return (alt_x << 32) | alt_y;
 }
 
-inline const char *getBlockName(unsigned short int type) {
-    static const char *blockNames[] = {
-        "Air", "Stone", "Dirt", "Grass", "PLACEHOLDER"
-    };
-
-    if (type >= 0 && type < Block::BLOCKS_COUNT) return blockNames[type];
-    return "??? (ERROR)";
-}
-
 inline Rectangle getTextureAtlas(int x, int y, int cellSizePixelsX, int cellSizePixelsY) {
     return shrinkUV(Rectangle{
         (float) x * cellSizePixelsX, (float) y * cellSizePixelsY, (float) cellSizePixelsX, (float) cellSizePixelsY

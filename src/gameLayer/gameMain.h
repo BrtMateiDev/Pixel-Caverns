@@ -6,6 +6,6 @@ bool initGame();
 
 bool updateGame();
 
-void closeGame();
+//void closeGame();
 
 #endif //MYGAME_GAMEMAIN_H

@@ -25,12 +25,16 @@ struct Player : public Entity {
         life = getMaxLife();
     }
 
+    float pickaxePower = 1.0f;
+
     struct Inventory {
         std::unordered_map<unsigned short int, unsigned int> minedOres;
 
         //amount = 1 means the parameter is defaulted as 1 if it's not given
         void mineOre(Block *b, unsigned int amount = 1) {
-            minedOres[b->type] += amount;
+            int drop = BlockRegistry[b->type].dropType;
+            if (drop == -1) drop = b->type;
+            minedOres[drop] += amount;
             //Don't worry about uninitialized keys, the compiler will automatically default them to 0
         }
     } inventory;

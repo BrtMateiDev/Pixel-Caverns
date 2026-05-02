@@ -10,9 +10,41 @@
 #include "blocks.h"
 #include "helpers.h"
 
+struct SpawnPoint {
+    int depth;
+    float chance; // 0.0 to 1.0 (e.g. 0.01 for 1%)
+};
+
 struct OreRule {
     unsigned short int blockType;
-    uint32_t chance; //10 means 1% chance
+    std::vector<SpawnPoint> points;
+
+    // Calculates the chance at a specific depth using linear interpolation (straight line graph)
+    float getChanceAtDepth(int y) const {
+        if (points.empty()) return 0.0f;
+
+        // Sort points by depth just in case they aren't
+        auto sortedPoints = points;
+        std::sort(sortedPoints.begin(), sortedPoints.end(), [](const SpawnPoint &a, const SpawnPoint &b) {
+            return a.depth < b.depth;
+        });
+
+        if (y <= sortedPoints.front().depth) return sortedPoints.front().chance;
+        if (y >= sortedPoints.back().depth) return sortedPoints.back().chance;
+
+        // Find the two points the current depth 'y' falls between
+        for (size_t i = 0; i < sortedPoints.size() - 1; ++i) {
+            const auto &p1 = sortedPoints[i];
+            const auto &p2 = sortedPoints[i + 1];
+
+            if (y >= p1.depth && y <= p2.depth) {
+                // Linear interpolation: y = y1 + (x - x1) * (y2 - y1) / (x2 - x1)
+                float t = (float) (y - p1.depth) / (p2.depth - p1.depth);
+                return p1.chance + t * (p2.chance - p1.chance);
+            }
+        }
+        return 0.0f;
+    }
 };
 
 struct LayerDef {
@@ -56,6 +88,22 @@ inline class GenerationOracle {
 
     std::vector<LayerDef> layers;
 
+    unsigned short int calculateOre(int x, int y, const LayerDef &layer) {
+        uint32_t hash = calculateHash(x, y, worldSeed);
+        // Use the hash to get a float between 0.0 and 1.0
+        float roll = (float) (hash % 1000000) / 1000000.0f;
+
+        float currentThreshold = 0.0f;
+        for (const auto &ore: layer.ores) {
+            float chance = ore.getChanceAtDepth(y);
+            currentThreshold += chance;
+
+            if (roll < currentThreshold) return ore.blockType;
+        }
+        return layer.baseBlock;
+    }
+
+public:
     const LayerDef *getLayerAt(int y) {
         for (const auto &layer: layers) {
             if (y >= layer.minDepth && y <= layer.maxDepth) return &layer;
@@ -63,17 +111,6 @@ inline class GenerationOracle {
         return nullptr;
     }
 
-    unsigned short int calculateOre(int x, int y, const LayerDef &layer) {
-        uint32_t hash = calculateHash(x, y, worldSeed);
-        uint32_t chance = hash % 1000;
-
-        for (const auto &ore: layer.ores) {
-            if (chance < ore.chance) return ore.blockType;
-        }
-        return layer.baseBlock;
-    }
-
-public:
     //Initializing the parameters the noise function will use with just the seed
     void init(int seed) {
         worldSeed = seed;
@@ -81,14 +118,28 @@ public:
         noise.SetSeed(seed);
         noise.SetFrequency(0.015f);
 
-        // Layer 0: Surface (0 to 20)
+        // Layer 0: Surface (0 to 5)
         layers.push_back({0, 0, Block::grass, -1.f, {}});
-        layers.push_back({1, 20, Block::dirt, -1.f, {}});
+        layers.push_back({1, 5, Block::dirt, -1.f, {}});
 
-        // Layer 1: Stone Layer (21 to 100)
+        // Layer 1: Stone Layer (6 to 100)
         layers.push_back({
-            21, 100, Block::stone, -0.4f, {
-                {Block::PLACEHOLDER, 50}, //Ores will go here soon
+            6, 100, Block::stone_shallow, -0.7f, {
+                {
+                    Block::coal,
+                    {
+                        {6, 0.05f}, // 5% at the top of the layer
+                        {60, 0.1f}, // Peaks at 10% at depth 60
+                        {100, 0.05f} // Fades back to 5% at depth 100
+                    }
+                },
+                {
+                    Block::iron,
+                    {
+                        {20, 0.005f}, // 0.5% starting from depth 20
+                        {100, 0.03f}, // Peaks at 3% at the bottom
+                    }
+                }
             }
         });
     }
@@ -97,7 +148,7 @@ public:
         if (y < 0) return Block::air;
 
         const LayerDef *layer = getLayerAt(y);
-        if (!layer) return Block::stone;
+        if (!layer) return Block::PLACEHOLDER;
 
         // Cave generation logic
         float noiseValue = noise.GetNoise((float) x, (float) y);
@@ -117,7 +168,6 @@ struct GameMap {
 
     std::unordered_map<uint64_t, Chunk *> mapData;
 
-    //~ means deconstructor
     ~GameMap() {
         for (auto &pair: mapData) {
             delete pair.second;
@@ -139,10 +189,24 @@ struct GameMap {
                     int wx = cx * Chunk::SIZE + dx;
                     int wy = cy * Chunk::SIZE + dy;
 
-                    if (usesOracle)
+                    if (usesOracle) {
                         newChunk->blocks[dy][dx].type = oracle.getBlockAt(wx, wy);
-                    else
+
+                        // Cave background
+                        if (newChunk->blocks[dy][dx].type == Block::air) {
+                            const LayerDef *layer = oracle.getLayerAt(wy);
+                            if (layer) {
+                                newChunk->blocks[dy][dx].bgTexture = BlockRegistry[layer->baseBlock].bgIndex;
+                            } else {
+                                newChunk->blocks[dy][dx].bgTexture = 0; // PLACEHOLDER_BG
+                            }
+                        } else {
+                            newChunk->blocks[dy][dx].bgTexture = BlockRegistry[newChunk->blocks[dy][dx].type].bgIndex;
+                        }
+                    } else {
                         newChunk->blocks[dy][dx].type = Block::air;
+                        newChunk->blocks[dy][dx].bgTexture = 0; // PLACEHOLDER_BG
+                    }
                 }
             }
             mapData[key] = newChunk;
@@ -154,18 +218,21 @@ struct GameMap {
     }
 };
 
+static short PH = Block::PLACEHOLDER;
+static short PH_BG = Block::PLACEHOLDER_BG;
+
 inline void generatePlayerBase(GameMap &baseMap) {
     const int BASE_WIDTH = 15;
     const int BASE_HEIGHT = 6;
 
     int playerBase[BASE_HEIGHT][BASE_WIDTH] =
     {
-        {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-        {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-        {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-        {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-        {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-        {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
+        {PH, PH, PH, PH, PH, PH, PH, PH, PH, PH, PH, PH, PH, PH, PH},
+        {PH, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH},
+        {PH, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH},
+        {PH, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH},
+        {PH, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH},
+        {PH, PH, PH, PH, PH, PH, PH, PH, PH, PH, PH, PH, PH, PH, PH}
     };
 
     for (int y = 0; y < BASE_HEIGHT; ++y)

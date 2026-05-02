@@ -22,6 +22,7 @@ add_executable("${CMAKE_PROJECT_NAME}"
         src/gameLayer/player.h
         src/gameLayer/player.cpp
         src/gameLayer/playerBase/storage.h
+        src/gameLayer/blocks.cpp
 )
 set_property(TARGET "${CMAKE_PROJECT_NAME}" PROPERTY CXX_STANDARD 17)
 

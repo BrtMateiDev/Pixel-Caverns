@@ -9,9 +9,9 @@ int main() {
 #endif
 #pragma region initializations
 	SetConfigFlags(FLAG_WINDOW_RESIZABLE);
-	InitWindow(800, 450, "Pixel Caverns");
-	//SetExitKey(KEY_NULL); //disables exiting on esc
+	InitWindow(GetScreenWidth(), GetScreenHeight(), "Pixel Caverns");
 	SetTargetFPS(240);
+	ToggleFullscreen();
 	rlImGuiSetup(true);
 
 	ImGuiIO &io = ImGui::GetIO();
@@ -52,7 +52,6 @@ int main() {
 	}
 
 	CloseWindow();
-	closeGame();
 	rlImGuiShutdown();
 
 	return 0;
