@@ -1,14 +1,14 @@
 #include <raylib.h>
 #include <imgui.h>
-#include <cmath>
 #include "gameMain.h"
 #include "assetManager.h"
 #include "helpers.h"
 #include "worldGenerator.h"
 #include "physics.h"
-#include "entityIdHolder.h"
 #include "player.h"
 #include "playerBase/storage.h"
+
+static bool toggle = false;
 
 struct GameData {
     GameMap worldMap;
@@ -48,7 +48,7 @@ bool initGame() {
 
     gameData.camera.target = {20.f, 120.f};
     gameData.camera.rotation = 0.0f;
-    gameData.camera.zoom = 200.0f;
+    gameData.camera.zoom = 250.0f;
 
     gameData.player.teleport({20, 0});
     gameData.player.physics.transform.w = assetManager.player.width * PIXEL;
@@ -68,10 +68,14 @@ bool updateGame() {
 
 #pragma region player movement
     static float PLAYER_SPEED = 10;
-    //if (IsKeyDown(KEY_W)) gameData.player.physics.transform.pos.y -= PLAYER_SPEED * dt;
-    if (IsKeyDown(KEY_A)) gameData.player.physics.transform.pos.x -= PLAYER_SPEED * dt;
-    //if (IsKeyDown(KEY_S)) gameData.player.physics.transform.pos.y += PLAYER_SPEED * dt;
-    if (IsKeyDown(KEY_D)) gameData.player.physics.transform.pos.x += PLAYER_SPEED * dt;
+    if (IsKeyDown(KEY_A)) {
+        gameData.player.physics.transform.pos.x -= PLAYER_SPEED * dt;
+        gameData.player.facingDirection = -1;
+    }
+    if (IsKeyDown(KEY_D)) {
+        gameData.player.physics.transform.pos.x += PLAYER_SPEED * dt;
+        gameData.player.facingDirection = 1;
+    }
 
     if (IsKeyDown(KEY_SPACE)) gameData.player.physics.jump(10);
 #pragma endregion
@@ -214,8 +218,8 @@ bool updateGame() {
     gameData.player.render_tail(assetManager);
     gameData.player.render(assetManager);
 
-    //Drawing the player's hitbox
-    //DrawRectangleLinesEx(gameData.player.physics.transform.getAABB(), 0.1, {20, 101, 250, 120});
+    //Hitbox visualization
+    if (toggle) DrawRectangleLinesEx(gameData.player.physics.transform.getAABB(), 0.05, {20, 101, 250, 120});
 #pragma endregion
 
 #pragma region visualizing block selection and mining cracks
@@ -272,6 +276,7 @@ bool updateGame() {
     ImGui::SliderFloat("Camera zoom", &gameData.camera.zoom, 5, 250);
     ImGui::SliderFloat("Player speed", &PLAYER_SPEED, 5, 100);
     ImGui::SliderFloat("Pickaxe power", &gameData.player.pickaxePower, 1, 10);
+    ImGui::Checkbox("Show player hitbox", &toggle);
 
     if (ImGui::Button("Teleport to base")) {
         gameData.activeMap = &gameData.baseMap;
@@ -280,7 +285,7 @@ bool updateGame() {
     }
     if (ImGui::Button("Teleport to mine")) {
         gameData.activeMap = &gameData.worldMap;
-        gameData.player.teleport({20, 10});
+        gameData.player.teleport({20, 0});
         //gameData.activeEntities = &gameData.entities;
     }
 

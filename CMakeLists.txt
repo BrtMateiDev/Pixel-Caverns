@@ -10,7 +10,9 @@ endif ()
 
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build Raylib as static libraries" FORCE)
 
-project(mygame)
+project("Pixel Caverns")
+
+set(EXE_NAME "PixelCaverns")
 
 add_subdirectory(thirdparty/raylib-5.0)
 add_subdirectory(thirdparty/imgui-docking)
@@ -18,55 +20,60 @@ add_subdirectory(thirdparty/rlImGui)
 
 file(GLOB_RECURSE MY_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 
-add_executable("${CMAKE_PROJECT_NAME}"
+add_executable(${EXE_NAME}
         src/gameLayer/player.h
         src/gameLayer/player.cpp
         src/gameLayer/playerBase/storage.h
         src/gameLayer/blocks.cpp
+        src/gameLayer/pickaxe.h
 )
-set_property(TARGET "${CMAKE_PROJECT_NAME}" PROPERTY CXX_STANDARD 17)
+
+# This is the magic line that makes the actual .exe have a space in its name!
+set_target_properties(${EXE_NAME} PROPERTIES OUTPUT_NAME "Pixel Caverns")
+
+set_property(TARGET ${EXE_NAME} PROPERTY CXX_STANDARD 17)
 
 if (PRODUCTION_BUILD)
-    target_compile_definitions("${CMAKE_PROJECT_NAME}" PUBLIC RESOURCES_PATH="./resources/")
-    target_compile_definitions("${CMAKE_PROJECT_NAME}" PUBLIC PRODUCTION_BUILD=1)
+    target_compile_definitions(${EXE_NAME} PUBLIC RESOURCES_PATH="./resources/")
+    target_compile_definitions(${EXE_NAME} PUBLIC PRODUCTION_BUILD=1)
 else ()
-    target_compile_definitions("${CMAKE_PROJECT_NAME}" PUBLIC RESOURCES_PATH="${CMAKE_CURRENT_SOURCE_DIR}/resources/")
-    target_compile_definitions("${CMAKE_PROJECT_NAME}" PUBLIC PRODUCTION_BUILD=0)
+    target_compile_definitions(${EXE_NAME} PUBLIC RESOURCES_PATH="${CMAKE_CURRENT_SOURCE_DIR}/resources/")
+    target_compile_definitions(${EXE_NAME} PUBLIC PRODUCTION_BUILD=0)
 endif ()
 
-target_sources("${CMAKE_PROJECT_NAME}" PRIVATE ${MY_SOURCES})
+target_sources(${EXE_NAME} PRIVATE ${MY_SOURCES})
 
 if (MSVC) # Visual Studio
-    target_compile_definitions("${CMAKE_PROJECT_NAME}" PUBLIC _CRT_SECURE_NO_WARNINGS)
-    target_compile_options("${CMAKE_PROJECT_NAME}" PRIVATE /arch:AVX2)
+    target_compile_definitions(${EXE_NAME} PUBLIC _CRT_SECURE_NO_WARNINGS)
+    target_compile_options(${EXE_NAME} PRIVATE /arch:AVX2)
 
     if (PRODUCTION_BUILD)
-        set_target_properties("${CMAKE_PROJECT_NAME}" PROPERTIES LINK_FLAGS "/SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup")
+        set_target_properties(${EXE_NAME} PROPERTIES LINK_FLAGS "/SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup")
     endif ()
 
 elseif (MINGW) #MinGW to Windows
-    target_compile_options("${CMAKE_PROJECT_NAME}" PRIVATE -mavx2 -mfma)
+    target_compile_options(${EXE_NAME} PRIVATE -mavx2 -mfma)
 
     #Including dlls in the exe to avoid dependencies
-    target_link_options("${CMAKE_PROJECT_NAME}" PRIVATE
+    target_link_options(${EXE_NAME} PRIVATE
             -static
             -static-libgcc
             -static-libstdc++
     )
 
     if (PRODUCTION_BUILD)
-        target_link_options("${CMAKE_PROJECT_NAME}" PRIVATE -mwindows)
+        target_link_options(${EXE_NAME} PRIVATE -mwindows)
     endif ()
 
 elseif (APPLE OR UNIX) # Linux / macOS
-    target_compile_options("${CMAKE_PROJECT_NAME}" PRIVATE -mavx2 -mfma)
+    target_compile_options(${EXE_NAME} PRIVATE -mavx2 -mfma)
     if (PRODUCTION_BUILD)
-        target_link_options("${CMAKE_PROJECT_NAME}" PRIVATE -s)
+        target_link_options(${EXE_NAME} PRIVATE -s)
     endif ()
 endif ()
 
-target_include_directories("${CMAKE_PROJECT_NAME}" PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src/platform")
-target_include_directories("${CMAKE_PROJECT_NAME}" PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src/gameLayer")
-target_include_directories("${CMAKE_PROJECT_NAME}" PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/FastNoiseLite")
+target_include_directories(${EXE_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src/platform")
+target_include_directories(${EXE_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src/gameLayer")
+target_include_directories(${EXE_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/FastNoiseLite")
 
-target_link_libraries("${CMAKE_PROJECT_NAME}" PRIVATE raylib imgui rlimgui)
+target_link_libraries(${EXE_NAME} PRIVATE raylib imgui rlimgui)

@@ -27,6 +27,8 @@ struct Player : public Entity {
 
     float pickaxePower = 1.0f;
 
+    signed char facingDirection = 1; //since the direction can only be -1 and 1, a signed char is the ideal data type
+
     struct Inventory {
         std::unordered_map<unsigned short int, unsigned int> minedOres;
 

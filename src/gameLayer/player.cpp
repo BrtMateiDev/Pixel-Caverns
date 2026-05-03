@@ -4,13 +4,20 @@
 
 
 void Player::render_tail(AssetManager &assetManager) {
-    auto c = physics.transform.getBottomLeft();
-    c.x -= 11 * PIXEL;
+    Vector2 c;
+    if (facingDirection == 1) {
+        c = physics.transform.getBottomLeft();
+        c.x -= 11 * PIXEL;
+    } else {
+        c = physics.transform.getBottomRight();
+        c.x -= 6 * PIXEL;
+    }
+
     c.y -= 9 * PIXEL;
 
     DrawTexturePro(
         assetManager.tail, //texture
-        {0, 0, (float) assetManager.tail.width, (float) assetManager.tail.height}, //source
+        {0, 0, (float) assetManager.tail.width * facingDirection, (float) assetManager.tail.height}, //source
         {c.x, c.y, 17 * PIXEL, 9 * PIXEL}, //destination
         {0, 0}, //origin
         0.0f, //rotation
@@ -23,7 +30,7 @@ void Player::render(AssetManager &assetManager) {
 
     DrawTexturePro(
         assetManager.player, //texture
-        {0, 0, (float) assetManager.player.width, (float) assetManager.player.height}, //source
+        {0, 0, (float) assetManager.player.width * facingDirection, (float) assetManager.player.height}, //source
         aabb_player, //destination
         {0, 0}, //origin
         0.0f, //rotation
