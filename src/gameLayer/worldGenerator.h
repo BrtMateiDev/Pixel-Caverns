@@ -148,7 +148,7 @@ public:
         if (y < 0) return Block::air;
 
         const LayerDef *layer = getLayerAt(y);
-        if (!layer) return Block::PLACEHOLDER;
+        if (!layer) return Block::INV;
 
         // Cave generation logic
         float noiseValue = noise.GetNoise((float) x, (float) y);
@@ -218,26 +218,28 @@ struct GameMap {
     }
 };
 
-static short PH = Block::PLACEHOLDER;
-static short PH_BG = Block::PLACEHOLDER_BG;
+static short INV = Block::INV;
 
 inline void generatePlayerBase(GameMap &baseMap) {
-    const int BASE_WIDTH = 15;
-    const int BASE_HEIGHT = 6;
+    const int BASE_WIDTH = 30;
+    const int BASE_HEIGHT = 10;
 
-    int playerBase[BASE_HEIGHT][BASE_WIDTH] =
-    {
-        {PH, PH, PH, PH, PH, PH, PH, PH, PH, PH, PH, PH, PH, PH, PH},
-        {PH, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH},
-        {PH, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH},
-        {PH, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH},
-        {PH, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH_BG, PH},
-        {PH, PH, PH, PH, PH, PH, PH, PH, PH, PH, PH, PH, PH, PH, PH}
-    };
+    int playerBase[BASE_HEIGHT][BASE_WIDTH];
+
+    for (int y = 0; y < BASE_HEIGHT; ++y) {
+        for (int x = 0; x < BASE_WIDTH; ++x) {
+            if (x == 0 || x == 4 || x == BASE_WIDTH - 1 || y == 0 || y >= 7) {
+                playerBase[y][x] = INV;
+            } else {
+                playerBase[y][x] = 0;
+            }
+        }
+    }
 
     for (int y = 0; y < BASE_HEIGHT; ++y)
         for (int x = 0; x < BASE_WIDTH; ++x)
             baseMap.getBlock(x, y).type = playerBase[y][x];
 }
+
 
 #endif

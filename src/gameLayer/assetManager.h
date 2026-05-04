@@ -8,6 +8,7 @@ struct AssetManager {
     Texture2D textures = {};
     Texture2D player = {};
     Texture2D tail = {};
+    Texture2D base = {};
 
     void loadAll();
 };

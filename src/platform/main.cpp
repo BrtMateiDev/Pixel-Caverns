@@ -11,7 +11,7 @@ int main() {
 	SetConfigFlags(FLAG_WINDOW_RESIZABLE);
 	InitWindow(GetScreenWidth(), GetScreenHeight(), "Pixel Caverns");
 	SetTargetFPS(240);
-	ToggleFullscreen();
+	//ToggleFullscreen();
 	rlImGuiSetup(true);
 
 	ImGuiIO &io = ImGui::GetIO();

@@ -12,8 +12,6 @@ inline constexpr float BLOCK_SIZE = 64.f;
 inline constexpr float TEXTURE_TILE_SIZE = 64.f;
 inline constexpr float PIXEL = 1.f / BLOCK_SIZE;
 
-struct AssetManager;
-
 inline Rectangle shrinkUV(Rectangle in, float shrink = 0.1) {
     in.width -= shrink;
     in.height -= shrink;

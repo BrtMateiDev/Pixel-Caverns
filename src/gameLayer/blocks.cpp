@@ -76,7 +76,11 @@ void initBlockRegistry() {
     BlockRegistry[Block::stone_deepslate].textureIndex = 4;
     BlockRegistry[Block::stone_deepslate].bgIndex = 2;
 
-    // PLACEHOLDERS
+    // MISC
+    BlockRegistry[Block::INV].isCollidable = true;
+    BlockRegistry[Block::INV].isMineable = false;
+    BlockRegistry[Block::INV].textureIndex = 0;
+
     BlockRegistry[Block::PLACEHOLDER].isCollidable = true;
     BlockRegistry[Block::PLACEHOLDER].isMineable = false;
     BlockRegistry[Block::PLACEHOLDER].textureIndex = 5;

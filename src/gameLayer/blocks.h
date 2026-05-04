@@ -43,6 +43,7 @@ struct Block {
 
         stone_deepslate,
 
+        INV,
         PLACEHOLDER,
         PLACEHOLDER_BG,
 
