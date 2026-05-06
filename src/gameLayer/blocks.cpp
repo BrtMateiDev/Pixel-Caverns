@@ -16,14 +16,14 @@ float Block::getDurability() {
 
 /*
 DEFAULTS:
-name -> "Unknown", isCollidable and isMinable -> true, durability -> 1.0f,
-indexes -> 0, dropType -> -1
+name -> "Unknown", isCollidable and isMinable -> true,
+durability -> 1.0f, indexes -> 0, dropType -> -1
 
 COPY PASTE:
 
 BlockRegistry[Block::].name = "";
-BlockRegistry[Block::].isCollidable = ;
-BlockRegistry[Block::].isMineable = ;
+BlockRegistry[Block::].isCollidable = false;
+BlockRegistry[Block::].isMineable = false;
 BlockRegistry[Block::].durability = ;
 BlockRegistry[Block::].textureIndex = ;
 BlockRegistry[Block::].bgIndex = ;
@@ -80,14 +80,14 @@ void initBlockRegistry() {
     //Gold
     BlockRegistry[Block::gold].name = "Gold";
     BlockRegistry[Block::gold].durability = 4.0f;
-    BlockRegistry[Block::gold].textureIndex = 4;
+    BlockRegistry[Block::gold].textureIndex = 3;
     BlockRegistry[Block::gold].bgIndex = 2;
     BlockRegistry[Block::gold].oreIndex = 4;
 
     //Diamond
     BlockRegistry[Block::diamond].name = "Diamond";
     BlockRegistry[Block::diamond].durability = 6.0f;
-    BlockRegistry[Block::diamond].textureIndex = 4;
+    BlockRegistry[Block::diamond].textureIndex = 3;
     BlockRegistry[Block::diamond].bgIndex = 2;
     BlockRegistry[Block::diamond].oreIndex = 5;
 

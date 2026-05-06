@@ -13,6 +13,7 @@ namespace PickaxeType {
         Silver,
         Gold,
         Diamond,
+        God,
         COUNT
     };
 }

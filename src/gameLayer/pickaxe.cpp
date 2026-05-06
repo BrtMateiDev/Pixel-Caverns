@@ -14,13 +14,13 @@ void initPickaxeRegistry() {
 
     // Wood
     PickaxeRegistry[PickaxeType::Wood] = {
-        "Pickaxe", 0.5f, 2.0f, 0, {}
+        "Wood Pickaxe", 0.5f, 2.0f, 0, {}
     };
 
     // Stone
     PickaxeRegistry[PickaxeType::Stone] = {
         "Stone Pickaxe", 1.0f, 2.5f, 1, {
-            {Block::stone_shallow, 25}
+            {Block::stone_shallow, 15}
         }
     };
 
@@ -57,5 +57,10 @@ void initPickaxeRegistry() {
             {Block::gold, 5},
             {Block::diamond, 15},
         }
+    };
+
+    // Shhh, don't tell anyone
+    PickaxeRegistry[PickaxeType::God] = {
+        "Wood Pickaxe", 999.f, 999.0f, 6, {}
     };
 }

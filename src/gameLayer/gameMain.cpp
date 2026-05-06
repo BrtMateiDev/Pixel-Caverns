@@ -1,5 +1,9 @@
 #include <raylib.h>
 #include <imgui.h>
+#include <vector>
+#include <string>
+#include <algorithm>
+#include <random>
 #include "gameMain.h"
 #include "assetManager.h"
 #include "helpers.h"
@@ -9,11 +13,24 @@
 #include "pickaxe.h"
 #include "storage.h"
 
+static int maxCapacity = 300;
+
 static bool hitbox_toggle = false;
 static bool storage_toggle = false;
 static bool forge_toggle = false;
+
 static bool canMove = true;
+
 static int selectedForgePickaxe = PickaxeType::Wood;
+
+static bool isSleeping = false;
+static float sleepTimer = 0.0f;
+static bool worldResetTriggered = false;
+
+static bool isTeleporting = false;
+static float teleportTimer = 0.0f;
+static bool teleportMapSwitched = false;
+static int teleportDestination = 0; // 0 is the mine, 1 is the base
 
 struct GameData {
     GameMap worldMap;
@@ -21,8 +38,6 @@ struct GameData {
     GameMap *activeMap = nullptr;
 
     Camera2D camera = {};
-
-    int creativeSelectedBlock = Block::stone_shallow;
 
     Vector2 selectionStart = {};
     Vector2 selectionEnd = {};
@@ -39,33 +54,61 @@ struct GameData {
 
 AssetManager assetManager;
 
-void tp_mine() {
+struct OreItem {
+    unsigned short type;
+    unsigned int amount;
+    std::string name;
+};
+
+// Sorting the ores alphabetically
+std::vector<OreItem> getSortedOres(const std::unordered_map<unsigned short int, unsigned int> &oreMap) {
+    std::vector<OreItem> items;
+    for (const auto &[type, amount]: oreMap) {
+        if (amount > 0) {
+            items.push_back({type, amount, BlockRegistry[type].name});
+        }
+    }
+
+    std::sort(items.begin(), items.end(), [](const OreItem &a, const OreItem &b) {
+        return a.name < b.name;
+    });
+
+    return items;
+}
+
+void execute_tp_mine() {
     gameData.activeMap = &gameData.worldMap;
     gameData.player.teleport({20, 0});
     gameData.player.facingDirection = 1;
     gameData.player.speed = 7;
-    //gameData.activeEntities = &gameData.entities;
 }
 
-void tp_base() {
+void execute_tp_base() {
     gameData.activeMap = &gameData.baseMap;
     gameData.player.teleport({28, 7});
     gameData.player.facingDirection = -1;
     gameData.player.speed = 5;
-    //gameData.activeEntities = nullptr;
 }
 
-void open_storage() {
-    ImGui::SetNextWindowPos(ImVec2(GetScreenWidth() - 250, 0), ImGuiCond_Always);
-    ImGui::SetNextWindowSize(ImVec2(250, 300), ImGuiCond_Always);
-
-    ImGui::Begin("Storage");
-
-    for (const auto &[type, amount]: storage.storedOres) {
-        ImGui::Text("%s: %d", BlockRegistry[type].name, amount);
+// --- THE CINEMATIC TRIGGERS ---
+void tp_mine() {
+    if (!isTeleporting && !isSleeping) {
+        isTeleporting = true;
+        teleportTimer = 0.0f;
+        teleportMapSwitched = false;
+        teleportDestination = 0; // Go to mine
+        canMove = false;
     }
+}
 
-    ImGui::End();
+void tp_base() {
+    if (!isTeleporting && !isSleeping) {
+        isTeleporting = true;
+        teleportTimer = 0.0f;
+        teleportMapSwitched = false;
+        teleportDestination = 1; // Go to base
+        canMove = false;
+    }
 }
 
 void open_forge() {
@@ -93,9 +136,9 @@ void open_forge() {
             DrawRectangleLinesEx(btnRec, 4, YELLOW);
         }
     }
-
-    DrawText(TextFormat("Power: %.1f", pickProps.power), startX + 10, startY + 266, 20, WHITE);
-    DrawText(TextFormat("Range: %.1f", pickProps.range), startX + 10, startY + 306, 20, WHITE);
+    DrawText(TextFormat("%s", pickProps.name), startX + 10, startY + 266, 20, WHITE);
+    DrawText(TextFormat("Power: %.1f", pickProps.power), startX + 10, startY + 306, 20, WHITE);
+    DrawText(TextFormat("Range: %.1f", pickProps.range), startX + 10, startY + 346, 20, WHITE);
 
     int yOffset = 266;
     bool canAfford = true;
@@ -167,13 +210,110 @@ void open_forge() {
     }
 }
 
+int getTotalOres(const std::unordered_map<unsigned short int, unsigned int> &oreMap) {
+    int total = 0;
+    for (const auto &[type, amount]: oreMap) {
+        total += amount;
+    }
+    return total;
+}
+
+void draw_inventory() {
+    float uiScale = 2.0f;
+    float destWidth = 128.0f * uiScale;
+    float destHeight = 128.0f * uiScale;
+
+    float invX = GetScreenWidth() - destWidth - 10.0f;
+    float invY = GetScreenHeight() - destHeight - 10.0f;
+
+    DrawTextureEx(assetManager.inventoryUI, {invX, invY}, 0.0f, uiScale, WHITE);
+
+    auto sortedInventory = getSortedOres(gameData.player.inventory.minedOres);
+    int totalOres = getTotalOres(gameData.player.inventory.minedOres);
+
+    float textX = invX + (2.0f * uiScale) + 5.0f;
+    float textY = invY + (16.0f * uiScale) + 5.0f;
+
+    for (const auto &item: sortedInventory) {
+        DrawText(TextFormat("%s: %u", item.name.c_str(), item.amount), textX, textY, 20, WHITE);
+        textY += 24;
+    }
+
+    float fillRatio = (float) totalOres / maxCapacity;
+    if (fillRatio > 1.0f) fillRatio = 1.0f;
+
+    float barHeight = 20.0f * uiScale;
+    float barX = invX + (2.0f * uiScale);
+    float barY = invY + destHeight - barHeight - (2.0f * uiScale);
+    float barWidth = destWidth - (4.0f * uiScale);
+
+    // Red fill based on the amount of total ores
+    DrawRectangle(barX, barY, barWidth * fillRatio, barHeight, RED);
+    const char *capText = TextFormat("%d / 300", totalOres);
+    int capTextWidth = MeasureText(capText, 20);
+    DrawText(capText, barX + (barWidth / 2.0f) - (capTextWidth / 2.0f), barY + 10.0f, 20, WHITE);
+}
+
+void open_storage() {
+    float uiScale = 2.0f;
+    float destWidth = 256.0f * uiScale;
+    float destHeight = 256.0f * uiScale;
+
+    float startX = roundf(GetScreenWidth() / 2.0f - (destWidth / 2.0f));
+    float startY = roundf(GetScreenHeight() / 2.0f - (destHeight / 2.0f));
+
+    DrawTextureEx(assetManager.storageUI, {startX, startY}, 0.0f, uiScale, WHITE);
+
+    auto sortedStorage = getSortedOres(storage.storedOres);
+
+    float textX = startX + (10.0f * uiScale) + 5.0f;
+    float textY = startY + (34.0f * uiScale) + 5.0f;
+
+    for (const auto &item: sortedStorage) {
+        DrawText(TextFormat("%s: %u", item.name.c_str(), item.amount), textX, textY, 40, WHITE);
+        textY += 50;
+    }
+
+    //"DEPOSIT ORES" button
+    float btnHeight = 40.0f * uiScale;
+    float btnX = startX + (4.0f * uiScale);
+    float btnY = startY + destHeight - btnHeight - (4.0f * uiScale);
+    float btnWidth = destWidth - (8.0f * uiScale);
+
+    Rectangle btnRec = {btnX, btnY, btnWidth, btnHeight};
+    Vector2 mousePos = GetMousePosition();
+
+    if (CheckCollisionPointRec(mousePos, btnRec)) {
+        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+            DrawRectangleRec(btnRec, {0, 0, 0, 50});
+        } else {
+            DrawRectangleRec(btnRec, {255, 255, 255, 50});
+        }
+
+        if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
+            storage.depositOres(gameData.player.inventory.minedOres);
+        }
+    }
+}
+
+int worldSeed;
+
+void generateSeed(int &worldSeed) {
+    std::random_device rd;
+    std::mt19937 gen(rd()); //Mersenne Twister
+    std::uniform_int_distribution<int> dist(-2147483647, 2147483647); //32-bit integers
+    worldSeed = dist(gen);
+}
+
 bool initGame() {
     assetManager.loadAll();
 
     initBlockRegistry();
     initPickaxeRegistry();
 
-    oracle.init(1);
+    generateSeed(worldSeed);
+    oracle.init(worldSeed);
+
     gameData.worldMap.usesOracle = true;
     gameData.baseMap.usesOracle = false; //Turning off the generation for the base
 
@@ -254,15 +394,6 @@ bool updateGame() {
 #pragma endregion
 
 #pragma region mouse and keyboard actions
-    if (IsKeyPressed(KEY_MINUS)) {
-        gameData.creativeSelectedBlock--;
-        if (gameData.creativeSelectedBlock <= 0) gameData.creativeSelectedBlock = Block::BLOCKS_COUNT - 1;
-    }
-    if (IsKeyPressed(KEY_EQUAL)) {
-        gameData.creativeSelectedBlock++;
-        if (gameData.creativeSelectedBlock >= Block::BLOCKS_COUNT - 2) gameData.creativeSelectedBlock = 1;
-    }
-
     Vector2 worldPos = GetScreenToWorld2D(GetMousePosition(), gameData.camera);;
 
     int blockX = floor(worldPos.x);
@@ -273,43 +404,44 @@ bool updateGame() {
 
     if (gameData.activeMap == &gameData.worldMap) {
         if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
-            if (inRange) {
-                auto &b = gameData.worldMap.getBlock(blockX, blockY);
-                if (b.isMineable()) {
-                    // Check if we are mining a new block
-                    if (blockX != gameData.lastMinedX || blockY != gameData.lastMinedY) {
-                        gameData.miningProgress = 0;
-                        gameData.lastMinedX = blockX;
-                        gameData.lastMinedY = blockY;
-                    }
+            if (getTotalOres(gameData.player.inventory.minedOres) < maxCapacity) {
+                if (inRange) {
+                    auto &b = gameData.worldMap.getBlock(blockX, blockY);
+                    if (b.isMineable()) {
+                        // Check if we are mining a new block
+                        if (blockX != gameData.lastMinedX || blockY != gameData.lastMinedY) {
+                            gameData.miningProgress = 0;
+                            gameData.lastMinedX = blockX;
+                            gameData.lastMinedY = blockY;
+                        }
 
-                    gameData.miningProgress += dt * currentPower;
+                        gameData.miningProgress += dt * currentPower;
 
-                    if (gameData.miningProgress >= b.getDurability()) {
-                        gameData.player.inventory.mineOre(&b);
-                        b.type = Block::air;
-                        gameData.miningProgress = 0;
+                        if (gameData.miningProgress >= b.getDurability()) {
+                            gameData.player.inventory.mineOre(&b);
+                            b.type = Block::air;
+                            gameData.miningProgress = 0;
+                        }
+                        gameData.player.startSwing();
                     }
-                    gameData.player.startSwing();
+                } else {
+                    // Reset progress if trying to mine out of range
+                    gameData.miningProgress = 0;
+                    gameData.lastMinedX = -1;
+                    gameData.lastMinedY = -1;
                 }
             } else {
-                // Reset progress if trying to mine out of range
+                // Reset progress if we release the button
                 gameData.miningProgress = 0;
                 gameData.lastMinedX = -1;
                 gameData.lastMinedY = -1;
             }
-        } else {
-            // Reset progress if we release the button
-            gameData.miningProgress = 0;
-            gameData.lastMinedX = -1;
-            gameData.lastMinedY = -1;
-        }
-
-        if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT) && inRange) {
-            auto &b = gameData.worldMap.getBlock(blockX, blockY);
-            b.type = gameData.creativeSelectedBlock;
         }
     }
+
+    if (IsKeyPressed(KEY_SEVEN)) gameData.player.currentPickaxe = PickaxeType::God;
+    if (IsKeyPressed(KEY_EIGHT)) maxCapacity = 99999;
+    if (IsKeyPressed(KEY_NINE)) maxCapacity = 300;
 
 #pragma endregion
 
@@ -392,7 +524,8 @@ bool updateGame() {
                 if (b.type != Block::air) {
                     DrawTexturePro(
                         assetManager.textures,
-                        getTextureAtlas(props.textureIndex, 0, TEXTURE_TILE_SIZE, TEXTURE_TILE_SIZE),
+                        getTextureAtlas(props.textureIndex + (y >= 101 && props.oreIndex), 0, TEXTURE_TILE_SIZE,
+                                        TEXTURE_TILE_SIZE),
                         destRect,
                         {0, 0},
                         0.0f,
@@ -460,10 +593,75 @@ bool updateGame() {
 
     EndMode2D();
 
+#pragma region Darkness effect
+    if (gameData.activeMap == &gameData.worldMap && !isSleeping && !isTeleporting) {
+        float playerY = gameData.player.physics.transform.pos.y;
+        float startDarkY = 20.0f;
+        float maxDarkY = 150.0f;
+
+        if (playerY > startDarkY) {
+            float darknessAlpha = (playerY - startDarkY) / (maxDarkY - startDarkY);
+            if (darknessAlpha > 0.92f) darknessAlpha = 0.92f;
+
+            DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(BLACK, darknessAlpha));
+
+            BeginBlendMode(BLEND_ADDITIVE); //Raylib's blending mode
+
+            Vector2 topLeft = GetScreenToWorld2D({0, 0}, gameData.camera);
+            Vector2 bottomRight = GetScreenToWorld2D({(float) GetScreenWidth(), (float) GetScreenHeight()},
+                                                     gameData.camera);
+
+            int startX = (int) floorf(topLeft.x - 1);
+            int endX = (int) ceilf(bottomRight.x + 1);
+            int startY = (int) floorf(topLeft.y - 1);
+            int endY = (int) ceilf(bottomRight.y + 1);
+
+            for (int y = startY; y <= endY; ++y) {
+                for (int x = startX; x <= endX; ++x) {
+                    auto &b = gameData.worldMap.getBlock(x, y);
+
+                    if (b.type == Block::gold || b.type == Block::diamond) {
+                        Vector2 screenPos = GetWorldToScreen2D({x + 0.5f, y + 0.5f}, gameData.camera);
+                        float oreGlowRadius = 500.0f;
+
+                        if (b.type == Block::gold) {
+                            Color goldColor = {255, 244, 134, 80};
+                            DrawCircleGradient((int) screenPos.x, (int) screenPos.y, oreGlowRadius, goldColor, BLANK);
+                        } else if (b.type == Block::diamond) {
+                            Color diamondColor = {151, 223, 250, 80};
+                            DrawCircleGradient((int) screenPos.x, (int) screenPos.y, oreGlowRadius, diamondColor,
+                                               BLANK);
+                        }
+                    }
+                }
+            }
+            // Light starts fading in at Y=40, and reaches max power at Y=100
+            float lightStartY = 40.0f;
+            float lightMaxY = 100.0f;
+            float lightIntensity = 0.0f;
+
+            if (playerY > lightStartY) {
+                lightIntensity = (playerY - lightStartY) / (lightMaxY - lightStartY);
+                if (lightIntensity > 1.0f) lightIntensity = 1.0f;
+            }
+
+            unsigned char finalAlpha = (unsigned char) (150.0f * lightIntensity);
+
+            if (finalAlpha > 0) {
+                Vector2 screenPlayerPos = GetWorldToScreen2D(gameData.player.physics.transform.pos, gameData.camera);
+
+                Color lightColor = {255, 200, 200, finalAlpha};
+                float lightRadius = 350.0f;
+
+                DrawCircleGradient((int) screenPlayerPos.x, (int) screenPlayerPos.y, lightRadius, lightColor, BLANK);
+            }
+
+            EndBlendMode();
+        }
+    }
+#pragma endregion
+
 #pragma region HUD
-
-
-    // Coordinate System
     if (gameData.activeMap == &gameData.worldMap) {
         float buttonSize = 120; //small offset (instead of 128) because the button has round corners
         int buttonIndex = 1;
@@ -484,7 +682,6 @@ bool updateGame() {
         if (isHeldDown) buttonIndex = 3;
         if (isReleased) {
             tp_base();
-            //TODO: ADD CUTSCENE
         }
         DrawTexturePro(
             assetManager.textures,
@@ -498,9 +695,21 @@ bool updateGame() {
         int playerX = (int) floorf(gameData.player.physics.transform.pos.x);
         int playerY = (int) floorf(gameData.player.physics.transform.pos.y);
         const char *coordText = TextFormat("(X: %d; Y: %d)", playerX, playerY);
-        int textWidth = MeasureText(coordText, 40);
-        DrawText(coordText, GetScreenWidth() / 2 - textWidth / 2, 15, 40, RAYWHITE);
+        int coordTextWidth = MeasureText(coordText, 40);
+        DrawText(coordText, GetScreenWidth() / 2 - coordTextWidth / 2, 15, 40, RAYWHITE);
+
+        if (playerY >= 6 && playerY <= 100) {
+            const char *layerText = "Shallow";
+            int layerWidth = MeasureText(layerText, 40);
+            DrawText(layerText, GetScreenWidth() / 2 - layerWidth / 2, 55, 40, RAYWHITE);
+        } else if (playerY >= 101) {
+            const char *layerText = "Deepslate";
+            int layerWidth = MeasureText(layerText, 40);
+            DrawText(layerText, GetScreenWidth() / 2 - layerWidth / 2, 55, 40, RAYWHITE);
+        }
     }
+
+    draw_inventory();
 
     if (gameData.activeMap == &gameData.baseMap) {
         float px = gameData.player.physics.transform.pos.x;
@@ -533,9 +742,12 @@ bool updateGame() {
                 canMove = !canMove;
             }
         } else if (px >= 25 && px <= 27) {
-            prompt = "Press [E] to sleep (reset mine) (NOT IMPLEMENTED)";
+            if (!isSleeping) prompt = "Press [E] to sleep (reset mine)";
             if (IsKeyPressed(KEY_E)) {
-                //TODO: ADD CUTSCENE
+                isSleeping = true;
+                sleepTimer = 0.0f;
+                worldResetTriggered = false;
+                canMove = false;
             }
         } else if (px >= 28 && px <= 29) {
             prompt = "Press [E] to exit the base";
@@ -548,13 +760,91 @@ bool updateGame() {
         if (storage_toggle) open_storage();
         if (forge_toggle) open_forge();
 
-        if (prompt != nullptr) {
+        if (prompt != nullptr && !isSleeping) {
             Vector2 screenPos = GetWorldToScreen2D({px, 4.0f}, gameData.camera);
 
             int textWidth = MeasureText(prompt, 40);
-            DrawRectangle((int) screenPos.x - textWidth / 2 - 5, (int) screenPos.y - 155, textWidth + 10, 50,
+            DrawRectangle((int) screenPos.x - textWidth / 2 - 5, (int) screenPos.y - 195, textWidth + 10, 50,
                           {0, 0, 0, 150});
-            DrawText(prompt, (int) screenPos.x - textWidth / 2, (int) screenPos.y - 150, 40, YELLOW);
+            DrawText(prompt, (int) screenPos.x - textWidth / 2, (int) screenPos.y - 190, 40, YELLOW);
+        }
+    }
+
+    if (isSleeping) {
+        sleepTimer += dt;
+
+        // Trigger reset at 1.0s
+        if (sleepTimer >= 1.0f && !worldResetTriggered) {
+            worldResetTriggered = true;
+
+            generateSeed(worldSeed);
+            oracle.init(worldSeed);
+            gameData.worldMap.mapData.clear();
+
+            // Highly recommended: reset mining progress so you don't
+            // instantly break the first block you look at when you wake up!
+            gameData.miningProgress = 0;
+            gameData.lastMinedX = -1;
+            gameData.lastMinedY = -1;
+        }
+
+        if (sleepTimer >= 2.5f) {
+            isSleeping = false;
+            canMove = true;
+        }
+    }
+
+    if (isTeleporting) {
+        teleportTimer += dt;
+
+        if (teleportTimer >= 0.5f && !teleportMapSwitched) {
+            teleportMapSwitched = true;
+            if (teleportDestination == 0) {
+                execute_tp_mine();
+            } else {
+                execute_tp_base();
+            }
+        }
+
+        if (teleportTimer >= 1.0f) {
+            isTeleporting = false;
+            canMove = true;
+        }
+    }
+
+    if (isSleeping) {
+        float alpha = 0.0f;
+        if (sleepTimer <= 0.5f) alpha = sleepTimer / 0.5f;
+        else if (sleepTimer > 0.5f && sleepTimer <= 2.0f) alpha = 1.0f;
+        else alpha = 1.0f - ((sleepTimer - 2.0f) / 0.5f);
+
+        if (alpha < 0.0f) alpha = 0.0f;
+        if (alpha > 1.0f) alpha = 1.0f;
+
+        DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(BLACK, alpha));
+
+        if (alpha == 1.0f) {
+            int textWidth = MeasureText("Zzz...", 40);
+            DrawText("Zzz...", GetScreenWidth() / 2 - textWidth / 2, GetScreenHeight() / 2, 40, WHITE);
+        }
+    }
+
+    if (isTeleporting) {
+        float alpha = 0.0f;
+        if (teleportTimer <= 0.3f) alpha = teleportTimer / 0.3f;
+        else if (teleportTimer > 0.3f && teleportTimer <= 0.7f) alpha = 1.0f;
+        else alpha = 1.0f - ((teleportTimer - 0.7f) / 0.3f);
+
+        if (alpha < 0.0f) alpha = 0.0f;
+        if (alpha > 1.0f) alpha = 1.0f;
+
+        Color teleportColor = {10, 80, 200, 255};
+        DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(teleportColor, alpha));
+
+        if (alpha == 1.0f) {
+            const char *tpText = (teleportDestination == 0) ? "Entering Mine" : "Returning to Base";
+            int textWidth = MeasureText(tpText, 40);
+            DrawText(tpText, GetScreenWidth() / 2 - textWidth / 2, GetScreenHeight() / 2, 40, WHITE);
         }
     }
 #pragma endregion
@@ -570,23 +860,8 @@ bool updateGame() {
     ImGui::SliderFloat("Player speed", &gameData.player.speed, 1, 100);
     ImGui::Checkbox("Show player hitbox", &hitbox_toggle);
 
-    if (gameData.activeMap == &gameData.baseMap) {
-        if (ImGui::Button("Deposit ores")) storage.depositOres(gameData.player.inventory.minedOres);
-    }
-
     ImGui::Text("FPS: %d", GetFPS());
 
-    ImGui::End();
-
-    //Player inventory window
-    ImGui::SetNextWindowPos(ImVec2(GetScreenWidth() - 250, GetScreenHeight() - 300), ImGuiCond_Always);
-    ImGui::SetNextWindowSize(ImVec2(250, 300), ImGuiCond_Always);
-
-    ImGui::Begin("Inventory");
-
-    for (const auto &[type, amount]: gameData.player.inventory.minedOres) {
-        ImGui::Text("%s: %d", BlockRegistry[type].name, amount);
-    }
     ImGui::End();
 
 #pragma endregion

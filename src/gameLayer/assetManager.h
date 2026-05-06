@@ -13,6 +13,8 @@ struct AssetManager {
     Texture2D bgMountains = {};
     Texture2D forgeUI = {};
     Texture2D forgeButtons = {};
+    Texture2D inventoryUI = {};
+    Texture2D storageUI = {};
 
     void loadAll();
 };

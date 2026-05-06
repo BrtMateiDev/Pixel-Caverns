@@ -22,14 +22,13 @@ struct BlockProperties {
     bool isCollidable = true;
     bool isMineable = true;
 
+    float durability = 1.0f;
     short textureIndex = 0; //in row 1
     short oreIndex = 0; //in row 2
     short bgIndex = 0; //in row 3
 
     int dropType = -1;
     //If not -1, it means the mined block will be different (ex: all stone variants should be stored into "Stone")
-
-    float durability = 1.0f;
 };
 
 struct Block {
@@ -48,7 +47,6 @@ struct Block {
         stone_deepslate,
         gold,
         diamond,
-
 
         stone_end,
 

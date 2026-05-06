@@ -9,4 +9,6 @@ void AssetManager::loadAll() {
     bgMountains = LoadTexture(RESOURCES_PATH "background_mountains.png");
     forgeUI = LoadTexture(RESOURCES_PATH "ForgeUI.png");
     forgeButtons = LoadTexture(RESOURCES_PATH "forgeButtons.png");
+    inventoryUI = LoadTexture(RESOURCES_PATH "inventoryUI.png");
+    storageUI = LoadTexture(RESOURCES_PATH "storageUI.png");
 }
