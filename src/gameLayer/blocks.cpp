@@ -48,13 +48,13 @@ void initBlockRegistry() {
     BlockRegistry[Block::grass].durability = 0.5f;
     BlockRegistry[Block::grass].textureIndex = 2;
     BlockRegistry[Block::grass].bgIndex = 1;
+    BlockRegistry[Block::grass].dropType = 1;
 
     // Stone Shallow
     BlockRegistry[Block::stone_shallow].name = "Stone";
     BlockRegistry[Block::stone_shallow].durability = 1.0f;
     BlockRegistry[Block::stone_shallow].textureIndex = 3;
     BlockRegistry[Block::stone_shallow].bgIndex = 2;
-
 
     // Coal
     BlockRegistry[Block::coal].name = "Coal";
@@ -70,11 +70,38 @@ void initBlockRegistry() {
     BlockRegistry[Block::iron].bgIndex = 2;
     BlockRegistry[Block::iron].oreIndex = 2;
 
+    // Silver
+    BlockRegistry[Block::silver].name = "Silver";
+    BlockRegistry[Block::silver].durability = 2.5f;
+    BlockRegistry[Block::silver].textureIndex = 3;
+    BlockRegistry[Block::silver].bgIndex = 2;
+    BlockRegistry[Block::silver].oreIndex = 3;
+
+    //Gold
+    BlockRegistry[Block::gold].name = "Gold";
+    BlockRegistry[Block::gold].durability = 4.0f;
+    BlockRegistry[Block::gold].textureIndex = 4;
+    BlockRegistry[Block::gold].bgIndex = 2;
+    BlockRegistry[Block::gold].oreIndex = 4;
+
+    //Diamond
+    BlockRegistry[Block::diamond].name = "Diamond";
+    BlockRegistry[Block::diamond].durability = 6.0f;
+    BlockRegistry[Block::diamond].textureIndex = 4;
+    BlockRegistry[Block::diamond].bgIndex = 2;
+    BlockRegistry[Block::diamond].oreIndex = 5;
+
     // Stone Deepslate
     BlockRegistry[Block::stone_deepslate].name = "Stone";
-    BlockRegistry[Block::stone_deepslate].durability = 1.5f;
+    BlockRegistry[Block::stone_deepslate].durability = 2.0f;
     BlockRegistry[Block::stone_deepslate].textureIndex = 4;
     BlockRegistry[Block::stone_deepslate].bgIndex = 2;
+    BlockRegistry[Block::stone_deepslate].dropType = 3;
+
+    // Stone End (end of the demo)
+    BlockRegistry[Block::stone_end].isCollidable = true;
+    BlockRegistry[Block::stone_end].isMineable = false;
+    BlockRegistry[Block::stone_end].textureIndex = 5;
 
     // MISC
     BlockRegistry[Block::INV].isCollidable = true;

@@ -21,23 +21,25 @@ void Player::render(AssetManager &assetManager) {
         }
         float currentAngle = startAngle + (endAngle - startAngle) * swingProgress;
 
-        float pickWidth = assetManager.pickaxe.width * PIXEL;
-        float pickHeight = assetManager.pickaxe.height * PIXEL;
+        float pickWidth = 96 * PIXEL;
+        float pickHeight = 110 * PIXEL;
+
+        const auto &pickImage = PickaxeRegistry[currentPickaxe];
 
         Vector2 pawPos = physics.transform.pos;
         pawPos.x += (10.0f * PIXEL) * facingDirection;
         pawPos.y += (5.0f * PIXEL);
 
-        Vector2 pickPivot = {pickWidth / 2.f, pickHeight}; //bottom-center
+        Vector2 pickPivot = {pickWidth / 2.f, pickHeight}; //bottom center
 
-        Rectangle sourceRec = {
-            0, 0, (float) assetManager.pickaxe.width * facingDirection, (float) assetManager.pickaxe.height
-        };
+        Rectangle sourceRec = getTextureAtlas(pickImage.textureIndex, 0, 96, 110);
+        sourceRec.width *= facingDirection;
         Rectangle destRec = {pawPos.x, pawPos.y, pickWidth, pickHeight};
 
         DrawTexturePro(
             assetManager.pickaxe,
-            sourceRec, destRec,
+            sourceRec,
+            destRec,
             pickPivot, // Pivots around the hand
             currentAngle, // Rotates over time
             WHITE

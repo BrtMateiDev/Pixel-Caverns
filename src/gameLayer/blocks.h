@@ -9,6 +9,9 @@ namespace Ore {
         none = 0,
         coal,
         iron,
+        silver,
+        gold,
+        diamond,
 
         ORES_COUNT
     };
@@ -40,8 +43,14 @@ struct Block {
 
         coal,
         iron,
+        silver,
 
         stone_deepslate,
+        gold,
+        diamond,
+
+
+        stone_end,
 
         INV,
         PLACEHOLDER,

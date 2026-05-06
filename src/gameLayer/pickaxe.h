@@ -3,9 +3,30 @@
 
 #pragma once
 
-struct Pickaxe {
-    float power = 1;
-    float range = 2.5;
+#include <unordered_map>
+
+namespace PickaxeType {
+    enum {
+        Wood = 0,
+        Stone,
+        Iron,
+        Silver,
+        Gold,
+        Diamond,
+        COUNT
+    };
+}
+
+struct PickaxeProperties {
+    const char *name = "Unknown";
+    float power = 1.0f;
+    float range = 2.5f;
+    int textureIndex = 0;
+    std::unordered_map<unsigned short int, unsigned int> cost;
 };
+
+extern PickaxeProperties PickaxeRegistry[PickaxeType::COUNT];
+
+void initPickaxeRegistry();
 
 #endif

@@ -130,7 +130,7 @@ public:
                     {
                         {6, 0.05f}, // 5% at the top of the layer
                         {60, 0.1f}, // Peaks at 10% at depth 60
-                        {100, 0.05f} // Fades back to 5% at depth 100
+                        {100, 0.03f} //Faded back to 5%
                     }
                 },
                 {
@@ -139,7 +139,56 @@ public:
                         {20, 0.005f}, // 0.5% starting from depth 20
                         {100, 0.03f}, // Peaks at 3% at the bottom
                     }
-                }
+                },
+                {
+                    Block::silver,
+                    {
+                        {50, 0.001f},
+                        {100, 0.003f},
+                    }
+                },
+            }
+        });
+
+        layers.push_back({
+            101, 200, Block::stone_deepslate, -0.6f, {
+                {
+                    Block::coal,
+                    {
+                        {101, 0.002f},
+                        {130, 0.001f}
+                    }
+                },
+                {
+                    Block::iron,
+                    {
+                        {101, 0.003f},
+                        {200, 0.0001f}
+                    }
+                },
+                {
+                    Block::silver,
+                    {
+                        {101, 0.0003f},
+                        {120, 0.01f},
+                        {190, 0.003f}
+                    }
+                },
+                {
+                    Block::gold,
+                    {
+                        {101, 0.0002f},
+                        {150, 0.003f},
+                        {200, 0.001f}
+                    }
+                },
+                {
+                    Block::diamond,
+                    {
+                        {160, 0.001f},
+                        {200, 0.005f}
+                    }
+                },
             }
         });
     }
@@ -148,7 +197,7 @@ public:
         if (y < 0) return Block::air;
 
         const LayerDef *layer = getLayerAt(y);
-        if (!layer) return Block::stone_deepslate;
+        if (!layer) return Block::stone_end;
 
         // Cave generation logic
         float noiseValue = noise.GetNoise((float) x, (float) y);

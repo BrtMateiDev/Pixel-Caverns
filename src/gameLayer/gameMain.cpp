@@ -6,11 +6,14 @@
 #include "worldGenerator.h"
 #include "physics.h"
 #include "player.h"
-#include "playerBase/storage.h"
+#include "pickaxe.h"
+#include "storage.h"
 
 static bool hitbox_toggle = false;
 static bool storage_toggle = false;
+static bool forge_toggle = false;
 static bool canMove = true;
+static int selectedForgePickaxe = PickaxeType::Wood;
 
 struct GameData {
     GameMap worldMap;
@@ -65,9 +68,110 @@ void open_storage() {
     ImGui::End();
 }
 
+void open_forge() {
+    float startX = GetScreenWidth() / 2.0f - (384.0f / 2.0f);
+    float startY = GetScreenHeight() / 2.0f - (448.0f / 2.0f);
+
+    DrawTextureEx(assetManager.forgeUI, {startX, startY}, 0.0f, 2.0f, WHITE);
+
+    Vector2 mousePos = GetMousePosition();
+    const auto &pickProps = PickaxeRegistry[selectedForgePickaxe];
+
+    for (int i = 0; i < PickaxeType::COUNT; i++) {
+        int col = (i % 3) * 128;
+        int row = (i / 3) * 128;
+        Rectangle btnRec = {startX + col, startY + row, 128, 128};
+
+        if (CheckCollisionPointRec(mousePos, btnRec)) {
+            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+                selectedForgePickaxe = i;
+            }
+        }
+
+        // Highlight the selected pickaxe
+        if (selectedForgePickaxe == i) {
+            DrawRectangleLinesEx(btnRec, 4, YELLOW);
+        }
+    }
+
+    DrawText(TextFormat("Power: %.1f", pickProps.power), startX + 10, startY + 266, 20, WHITE);
+    DrawText(TextFormat("Range: %.1f", pickProps.range), startX + 10, startY + 306, 20, WHITE);
+
+    int yOffset = 266;
+    bool canAfford = true;
+
+    for (const auto &[oreType, required]: pickProps.cost) {
+        int invAmount = gameData.player.inventory.minedOres[oreType];
+        int storageAmount = storage.storedOres[oreType];
+        int totalOwned = invAmount + storageAmount;
+
+        if (totalOwned < required) canAfford = false;
+
+        Color textColor = (totalOwned >= required) ? GREEN : RED;
+        DrawText(TextFormat("%s: %d / %d", BlockRegistry[oreType].name, totalOwned, required),
+                 startX + 202, startY + yOffset, 20, textColor);
+        yOffset += 30;
+    }
+
+    bool isCrafted = gameData.player.unlockedPickaxes[selectedForgePickaxe];
+    bool isEquipped = (gameData.player.currentPickaxe == selectedForgePickaxe);
+
+    // Determine the state (Now with 4 states!)
+    int buttonIndex = 0; // "CRAFT PICKAXE!"
+    if (isEquipped) {
+        buttonIndex = 3; // "ALREADY EQUIPPED!"
+    } else if (isCrafted) {
+        buttonIndex = 2; // "EQUIP PICKAXE!"
+    } else if (!canAfford) {
+        buttonIndex = 1; // "NOT ENOUGH ORES!"
+    } else {
+        buttonIndex = 0;
+    }
+
+    Rectangle craftBtnRec = {startX + 28.0f, startY + 396.0f, 328.0f, 40.0f};
+    Rectangle sourceRec = {buttonIndex * 164.0f, 0.0f, 164.0f, 20.0f}; //buttons are 164 pixels in lenght
+
+    DrawTexturePro(
+        assetManager.forgeButtons,
+        sourceRec,
+        craftBtnRec,
+        {0, 0},
+        0.0f,
+        WHITE
+    );
+
+    if ((buttonIndex == 0 || buttonIndex == 2) && CheckCollisionPointRec(mousePos, craftBtnRec)) {
+        // Visual feedback experiment
+        DrawRectangleRec(craftBtnRec, {255, 255, 255, 50});
+
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+            if (buttonIndex == 0) {
+                for (const auto &[oreType, required]: pickProps.cost) {
+                    auto &invAmount = gameData.player.inventory.minedOres[oreType];
+                    auto &storageAmount = storage.storedOres[oreType];
+                    int amountNeeded = required;
+
+                    if (invAmount >= amountNeeded) {
+                        invAmount -= amountNeeded;
+                    } else {
+                        amountNeeded -= invAmount;
+                        invAmount = 0;
+                        storageAmount -= amountNeeded;
+                    }
+                }
+                gameData.player.unlockedPickaxes[selectedForgePickaxe] = true;
+            }
+
+            gameData.player.currentPickaxe = selectedForgePickaxe;
+        }
+    }
+}
+
 bool initGame() {
-    initBlockRegistry();
     assetManager.loadAll();
+
+    initBlockRegistry();
+    initPickaxeRegistry();
 
     oracle.init(1);
     gameData.worldMap.usesOracle = true;
@@ -93,6 +197,9 @@ bool updateGame() {
     gameData.camera.offset = {GetScreenWidth() / 2.0f, GetScreenHeight() / 2.0f};
 
     ClearBackground({75, 75, 150, 255});
+
+    float currentPower = PickaxeRegistry[gameData.player.currentPickaxe].power;
+    float currentRange = PickaxeRegistry[gameData.player.currentPickaxe].range;
 
 #pragma region player movement
     if (IsKeyDown(KEY_A) && canMove) {
@@ -162,8 +269,7 @@ bool updateGame() {
     int blockY = floor(worldPos.y);
 
     float distance = Vector2Distance(gameData.player.physics.transform.pos, {blockX + 0.5f, blockY + 0.5f});
-    bool inRange = distance <= 2.5f;
-    // A distance of 2.5 covers exactly the block you are in and the immediately adjacent ones
+    bool inRange = distance <= currentRange;
 
     if (gameData.activeMap == &gameData.worldMap) {
         if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
@@ -177,7 +283,7 @@ bool updateGame() {
                         gameData.lastMinedY = blockY;
                     }
 
-                    gameData.miningProgress += dt * gameData.player.pickaxePower;
+                    gameData.miningProgress += dt * currentPower;
 
                     if (gameData.miningProgress >= b.getDurability()) {
                         gameData.player.inventory.mineOre(&b);
@@ -411,15 +517,20 @@ bool updateGame() {
                 prompt = "Press [E] to open the storage";
             else
                 prompt = "Press [E] to close";
+
             if (IsKeyPressed(KEY_E)) {
                 storage_toggle = !storage_toggle;
                 canMove = !canMove;
             }
         } else if (px >= 17 && px <= 22) {
-            prompt = "Press [E] to use the pickaxe forge (NOT IMPLEMENTED)";
+            if (!forge_toggle)
+                prompt = "Press [E] to use the pickaxe forge";
+            else
+                prompt = "Press [E] to close";
 
             if (IsKeyPressed(KEY_E)) {
-                //TODO: ADD INTERACTION
+                forge_toggle = !forge_toggle;
+                canMove = !canMove;
             }
         } else if (px >= 25 && px <= 27) {
             prompt = "Press [E] to sleep (reset mine) (NOT IMPLEMENTED)";
@@ -435,6 +546,7 @@ bool updateGame() {
         }
 
         if (storage_toggle) open_storage();
+        if (forge_toggle) open_forge();
 
         if (prompt != nullptr) {
             Vector2 screenPos = GetWorldToScreen2D({px, 4.0f}, gameData.camera);
@@ -456,7 +568,6 @@ bool updateGame() {
 
     ImGui::SliderFloat("Camera zoom", &gameData.camera.zoom, 5, 250);
     ImGui::SliderFloat("Player speed", &gameData.player.speed, 1, 100);
-    ImGui::SliderFloat("Pickaxe power", &gameData.player.pickaxePower, 1, 10);
     ImGui::Checkbox("Show player hitbox", &hitbox_toggle);
 
     if (gameData.activeMap == &gameData.baseMap) {

@@ -23,9 +23,10 @@ file(GLOB_RECURSE MY_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/
 add_executable(${EXE_NAME}
         src/gameLayer/player.h
         src/gameLayer/player.cpp
-        src/gameLayer/playerBase/storage.h
+        src/gameLayer/storage.h
         src/gameLayer/blocks.cpp
         src/gameLayer/pickaxe.h
+        src/gameLayer/pickaxe.cpp
 )
 
 # This is the magic line that makes the actual .exe have a space in its name!

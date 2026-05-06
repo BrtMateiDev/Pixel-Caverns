@@ -9,6 +9,7 @@
 #include "physics.h"
 #include "entity.h"
 #include "helpers.h"
+#include "pickaxe.h"
 
 struct AssetManager;
 
@@ -28,7 +29,8 @@ struct Player : public Entity {
         life = getMaxLife();
     }
 
-    float pickaxePower = 1.0f;
+    int currentPickaxe = PickaxeType::Wood;
+    bool unlockedPickaxes[PickaxeType::COUNT] = {true, false, false, false, false, false};
     bool isSwinging = false;
     float swingTimer = 0.0f;
     float maxSwingTime = 0.30f;

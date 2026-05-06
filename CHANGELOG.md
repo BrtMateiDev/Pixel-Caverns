@@ -1,21 +1,22 @@
 # Changelog:
 
-## Graphics update:
+## Big content update:
 
-* The player sprite is now larger, and the hitbox has been resized accordingly
-* New pickaxe swing animation
-* Added a simple background with parallax effect
-* Some minor bug fixes
+* New ores:
+    * Silver
+    * Gold
+    * Diamond
+* New layer: Deepslate
+* New pickaxes: Wood, Stone, Iron, Silver, Gold and Diamond
+* New UI: Finished the pickaxe forge UI and crafting functions
 
 ## Current to-do list:
 
+* Finish the storage and inventory UI
+* Add the researcher and his dialogue
 * Fix awkward physics
 * Surface design and boundaries
-* Pickaxe registry
-* Pickaxe crafting at the forge (only the window for now)
-* More ores
 * Mine regeneration (sleeping)
 * Darkness effect while underground
-* Player animations (idle, walk, jump, fall)
 * Sound effects
 * Short cutscenes (for example when teleporting)
