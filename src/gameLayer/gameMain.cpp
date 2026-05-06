@@ -78,11 +78,9 @@ bool initGame() {
 
     gameData.camera.target = {20.f, 120.f};
     gameData.camera.rotation = 0.0f;
-    gameData.camera.zoom = 250.0f;
+    gameData.camera.zoom = 200.0f;
 
     gameData.player.teleport({20, 0});
-    gameData.player.physics.transform.w = assetManager.player.width * PIXEL;
-    gameData.player.physics.transform.h = assetManager.player.height * PIXEL;
 
     return true;
 }
@@ -144,6 +142,7 @@ bool updateGame() {
     }
 
     gameData.player.physics.updateFinal();
+    gameData.player.update_pickaxe(dt);
 
 #pragma endregion
 
@@ -185,6 +184,7 @@ bool updateGame() {
                         b.type = Block::air;
                         gameData.miningProgress = 0;
                     }
+                    gameData.player.startSwing();
                 }
             } else {
                 // Reset progress if trying to mine out of range
@@ -233,6 +233,37 @@ bool updateGame() {
             WHITE
         );
     } else {
+        if (startYView < 10.0f) {
+            float targetSkyHeight = 20.0f;
+            float skyScale = targetSkyHeight / assetManager.bgSky.height;
+            float targetMountainHeight = 5.0f;
+            float mountainScale = targetMountainHeight / assetManager.bgMountains.height;
+
+            float skyY = 0.5f - targetSkyHeight;
+            float mountainY = 0.5f - targetMountainHeight;
+
+            //Sky
+            float skySpeed = 1.0f;
+            float skyWidth = assetManager.bgSky.width * skyScale;
+            float skyShiftX = gameData.camera.target.x * skySpeed;
+            float skyStartX = floorf((startXView - skyShiftX) / skyWidth) * skyWidth + skyShiftX;
+
+            for (float x = skyStartX; x <= endXView; x += skyWidth) {
+                DrawTextureEx(assetManager.bgSky, {x, skyY}, 0.0f, skyScale, WHITE);
+            }
+
+            //Mountains
+            float mountainSpeed = 0.8f;
+            float mountainWidth = assetManager.bgMountains.width * mountainScale;
+            float mountainShiftX = gameData.camera.target.x * mountainSpeed;
+            float mountainStartX = floorf((startXView - mountainShiftX) / mountainWidth) * mountainWidth +
+                                   mountainShiftX;
+
+            for (float x = mountainStartX; x <= endXView; x += mountainWidth) {
+                DrawTextureEx(assetManager.bgMountains, {x, mountainY}, 0.0f, mountainScale, WHITE);
+            }
+        }
+
         for (int y = startYView; y <= endYView; ++y)
             for (int x = startXView; x <= endXView; ++x) {
                 auto &b = gameData.activeMap->getBlock(x, y);
@@ -240,14 +271,16 @@ bool updateGame() {
                 Rectangle destRect = {(float) x, (float) y, 1, 1};
 
                 // 1. Background blocks
-                DrawTexturePro(
-                    assetManager.textures,
-                    getTextureAtlas(b.bgTexture, 1, TEXTURE_TILE_SIZE, TEXTURE_TILE_SIZE),
-                    destRect,
-                    {0, 0},
-                    0.0f,
-                    WHITE
-                );
+                if (b.bgTexture) {
+                    DrawTexturePro(
+                        assetManager.textures,
+                        getTextureAtlas(b.bgTexture, 1, TEXTURE_TILE_SIZE, TEXTURE_TILE_SIZE),
+                        destRect,
+                        {0, 0},
+                        0.0f,
+                        WHITE
+                    );
+                }
 
                 // 2. Blocks
                 if (b.type != Block::air) {
@@ -277,36 +310,23 @@ bool updateGame() {
 
 #pragma endregion
 
-#pragma region drawing entities (DISABLED)
-    // if (gameData.activeEntities)
-    //     for (auto &e: gameData.entities.entities)
-    //         e.second->render(assetManager);
-
-#pragma endregion
-
-#pragma region drawing the player
-    gameData.player.render_tail(assetManager);
-    gameData.player.render(assetManager);
-
-    //Hitbox visualization
-    if (hitbox_toggle) DrawRectangleLinesEx(gameData.player.physics.transform.getAABB(), 0.05, {20, 101, 250, 120});
-#pragma endregion
-
 #pragma region visualizing block selection and mining cracks
-    if (gameData.activeMap == &gameData.worldMap && inRange) {
+    if (gameData.activeMap == &gameData.worldMap) {
         // Draw the main selection highlight
-        DrawTexturePro(
-            assetManager.textures,
-            getTextureAtlas(0, 3, TEXTURE_TILE_SIZE, TEXTURE_TILE_SIZE),
-            {(float) blockX, (float) blockY, 1, 1},
-            {0, 0},
-            0.f,
-            WHITE
-        );
+        auto &b = gameData.worldMap.getBlock(blockX, blockY);
+        if (b.isMineable()) {
+            DrawTexturePro(
+                assetManager.textures,
+                getTextureAtlas(0, 3, TEXTURE_TILE_SIZE, TEXTURE_TILE_SIZE),
+                {(float) blockX, (float) blockY, 1, 1},
+                {0, 0},
+                0.f,
+                WHITE
+            );
+        }
 
         // Draw mining cracks if we are currently mining this block
         if (gameData.lastMinedX == blockX && gameData.lastMinedY == blockY && gameData.miningProgress > 0) {
-            auto &b = gameData.worldMap.getBlock(blockX, blockY);
             float durability = b.getDurability();
             if (durability > 0) {
                 int frame = (int) ((gameData.miningProgress / durability) * 4); // 4 frames
@@ -325,6 +345,13 @@ bool updateGame() {
     }
 #pragma endregion
 
+#pragma region drawing the player
+    gameData.player.render(assetManager);
+
+    //Hitbox visualization
+    if (hitbox_toggle) DrawRectangleLinesEx(gameData.player.physics.transform.getAABB(), 0.05, {20, 101, 250, 120});
+#pragma endregion
+
     EndMode2D();
 
 #pragma region HUD
@@ -332,11 +359,11 @@ bool updateGame() {
 
     // Coordinate System
     if (gameData.activeMap == &gameData.worldMap) {
-        float buttonSize = 128;
+        float buttonSize = 120; //small offset (instead of 128) because the button has round corners
         int buttonIndex = 1;
         Rectangle tpButton = {
-            0,
-            (float) GetScreenHeight() - buttonSize,
+            4,
+            (float) GetScreenHeight() - buttonSize - 4,
             buttonSize,
             buttonSize,
         };

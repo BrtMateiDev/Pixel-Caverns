@@ -1,27 +1,21 @@
 # Changelog:
 
-## Big updates for the player map and UI elements:
+## Graphics update:
 
-* The player's base design has finally started, this includes:
-    * Finalized base boundaries
-    * Background image
-        * Note: The base appears oversized because it is managed by the researcher (who is much taller) and the player
-          will be resized to a larger sprite soon
-    * Dynamic camera clamping
-    * Interactable prompts (only the storage and door are functional)
-
-
-* New UI element: A teleport button to go back to your base
+* The player sprite is now larger, and the hitbox has been resized accordingly
+* New pickaxe swing animation
+* Added a simple background with parallax effect
+* Some minor bug fixes
 
 ## Current to-do list:
 
-* Map background + surface design and boundaries
-* Pickaxe registry and animations
+* Fix awkward physics
+* Surface design and boundaries
+* Pickaxe registry
 * Pickaxe crafting at the forge (only the window for now)
 * More ores
 * Mine regeneration (sleeping)
 * Darkness effect while underground
-* Player resize
 * Player animations (idle, walk, jump, fall)
 * Sound effects
 * Short cutscenes (for example when teleporting)

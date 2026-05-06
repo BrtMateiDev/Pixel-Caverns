@@ -2,39 +2,71 @@
 #include "assetManager.h"
 #include "helpers.h"
 
+void Player::render(AssetManager &assetManager) {
+    //Pickaxe animation
+    if (isSwinging) {
+        float swingProgress = swingTimer / maxSwingTime;
 
-void Player::render_tail(AssetManager &assetManager) {
-    Vector2 c;
-    if (facingDirection == 1) {
-        c = physics.transform.getBottomLeft();
-        c.x -= 11 * PIXEL;
-    } else {
-        c = physics.transform.getBottomRight();
-        c.x -= 6 * PIXEL;
+        float startAngle = 0.0f;
+        float endAngle = 0.0f;
+
+        if (facingDirection == 1) {
+            // Looking right
+            startAngle = -45.f;
+            endAngle = 90.0f;
+        } else {
+            // Looking left
+            startAngle = 45.f;
+            endAngle = -90.0f;
+        }
+        float currentAngle = startAngle + (endAngle - startAngle) * swingProgress;
+
+        float pickWidth = assetManager.pickaxe.width * PIXEL;
+        float pickHeight = assetManager.pickaxe.height * PIXEL;
+
+        Vector2 pawPos = physics.transform.pos;
+        pawPos.x += (10.0f * PIXEL) * facingDirection;
+        pawPos.y += (5.0f * PIXEL);
+
+        Vector2 pickPivot = {pickWidth / 2.f, pickHeight}; //bottom-center
+
+        Rectangle sourceRec = {
+            0, 0, (float) assetManager.pickaxe.width * facingDirection, (float) assetManager.pickaxe.height
+        };
+        Rectangle destRec = {pawPos.x, pawPos.y, pickWidth, pickHeight};
+
+        DrawTexturePro(
+            assetManager.pickaxe,
+            sourceRec, destRec,
+            pickPivot, // Pivots around the hand
+            currentAngle, // Rotates over time
+            WHITE
+        );
+
+        if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) isSwinging = false;
     }
 
-    c.y -= 9 * PIXEL;
+    //Player rendering
+    Vector2 centerPos = physics.transform.pos;
+
+    float visualWidth = SPRITE_W * PIXEL;
+    float visualHeight = SPRITE_H * PIXEL;
+    Vector2 visualOrigin = {visualWidth / 2.f, visualHeight / 2.f};
+
+    Rectangle sourceRec = {
+        0, 0, (float) assetManager.player.width * facingDirection, (float) assetManager.player.height
+    };
+    Rectangle destRec = {
+        centerPos.x - (11 * PIXEL * facingDirection), centerPos.y - (7 * PIXEL), visualWidth, visualHeight
+    };
 
     DrawTexturePro(
-        assetManager.tail, //texture
-        {0, 0, (float) assetManager.tail.width * facingDirection, (float) assetManager.tail.height}, //source
-        {c.x, c.y, 17 * PIXEL, 9 * PIXEL}, //destination
-        {0, 0}, //origin
-        0.0f, //rotation
-        WHITE //tint
-    );
-}
-
-void Player::render(AssetManager &assetManager) {
-    auto aabb_player = physics.transform.getAABB();
-
-    DrawTexturePro(
-        assetManager.player, //texture
-        {0, 0, (float) assetManager.player.width * facingDirection, (float) assetManager.player.height}, //source
-        aabb_player, //destination
-        {0, 0}, //origin
-        0.0f, //rotation
-        WHITE //tint
+        assetManager.player,
+        sourceRec,
+        destRec,
+        visualOrigin,
+        0.0f,
+        WHITE
     );
 }
 

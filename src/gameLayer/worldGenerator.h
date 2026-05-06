@@ -148,7 +148,7 @@ public:
         if (y < 0) return Block::air;
 
         const LayerDef *layer = getLayerAt(y);
-        if (!layer) return Block::INV;
+        if (!layer) return Block::stone_deepslate;
 
         // Cave generation logic
         float noiseValue = noise.GetNoise((float) x, (float) y);

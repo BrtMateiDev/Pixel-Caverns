@@ -13,12 +13,15 @@
 struct AssetManager;
 
 struct Player : public Entity {
-    static constexpr int SPRITE_W = 45;
-    static constexpr int SPRITE_H = 36;
+    static constexpr float SPRITE_W = 112;
+    static constexpr float SPRITE_H = 72;
+
+    static constexpr float HITBOX_W = 60.f * PIXEL;
+    static constexpr float HITBOX_H = 58.f * PIXEL;
 
     Player() {
-        physics.transform.w = SPRITE_W * PIXEL;
-        physics.transform.h = SPRITE_H * PIXEL;
+        physics.transform.w = HITBOX_W;
+        physics.transform.h = HITBOX_H;
 
         inventory.minedOres = {};
 
@@ -26,6 +29,9 @@ struct Player : public Entity {
     }
 
     float pickaxePower = 1.0f;
+    bool isSwinging = false;
+    float swingTimer = 0.0f;
+    float maxSwingTime = 0.30f;
 
     float speed = 7;
 
@@ -47,11 +53,27 @@ struct Player : public Entity {
         return physics.transform.pos;
     }
 
+    void startSwing() {
+        if (!isSwinging) {
+            isSwinging = true;
+            swingTimer = 0.0f;
+        }
+    }
+
     void render(AssetManager &assetManager) override;
 
-    void render_tail(AssetManager &assetManager);
+    bool update(float deltaTime, EntityUpdateData entityUpdateData) override;
 
-    bool update(float dt, EntityUpdateData entityUpdateData) override;
+    bool update_pickaxe(float deltaTime) {
+        //Updating the pickaxe swing
+        if (isSwinging) {
+            swingTimer += deltaTime;
+            if (swingTimer >= maxSwingTime) {
+                isSwinging = false;
+            }
+        }
+        return true;
+    };
 
     int getEntityType() { return EntityType_Player; }
 
