@@ -3,6 +3,8 @@
 #include "helpers.h"
 #include "worldGenerator.h"
 
+extern AssetManager assetManager;
+
 void Player::render(AssetManager &assetManager) {
     //Pickaxe animation
     if (isSwinging) {
@@ -73,7 +75,7 @@ void Player::render(AssetManager &assetManager) {
     );
 }
 
-bool Player::update_pickaxe(float deltaTime, AssetManager &assetManager) {
+bool Player::update_pickaxe(float deltaTime) {
     if (isSwinging) {
         swingTimer += deltaTime;
         float swingProgress = swingTimer / maxSwingTime;
@@ -83,17 +85,23 @@ bool Player::update_pickaxe(float deltaTime, AssetManager &assetManager) {
 
         if (swingProgress >= 0.5f && !soundPlayedThisSwing) {
             if (physics.transform.pos.y <= 100) {
-                SetSoundPitch(assetManager.pickaxeHit, GetRandomValue(70, 130) / 100.0f);
-                PlaySound(assetManager.pickaxeHit);
+                if (IsSoundValid(assetManager.pickaxeHit)) {
+                    SetSoundPitch(assetManager.pickaxeHit, GetRandomValue(70, 130) / 100.0f);
+                    PlaySound(assetManager.pickaxeHit);
+                }
                 soundPlayedThisSwing = true;
             } else if (physics.transform.pos.y >= 101) {
                 if (oracle.isNearCave(playerX, playerY)) {
-                    SetSoundPitch(assetManager.pickaxeHit_echo, GetRandomValue(50, 110) / 100.0f);
-                    PlaySound(assetManager.pickaxeHit_echo);
+                    if (IsSoundValid(assetManager.pickaxeHit_echo)) {
+                        SetSoundPitch(assetManager.pickaxeHit_echo, GetRandomValue(50, 110) / 100.0f);
+                        PlaySound(assetManager.pickaxeHit_echo);
+                    }
                     soundPlayedThisSwing = true;
                 } else {
-                    SetSoundPitch(assetManager.pickaxeHit, GetRandomValue(50, 110) / 100.0f);
-                    PlaySound(assetManager.pickaxeHit);
+                    if (IsSoundValid(assetManager.pickaxeHit)) {
+                        SetSoundPitch(assetManager.pickaxeHit, GetRandomValue(50, 110) / 100.0f);
+                        PlaySound(assetManager.pickaxeHit);
+                    }
                     soundPlayedThisSwing = true;
                 }
             }

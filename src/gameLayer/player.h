@@ -69,7 +69,7 @@ struct Player : public Entity {
 
     bool update(float deltaTime, EntityUpdateData entityUpdateData) override;
 
-    bool update_pickaxe(float deltaTime, AssetManager &assetManager);
+    bool update_pickaxe(float deltaTime);
 
     int getEntityType() { return EntityType_Player; }
 

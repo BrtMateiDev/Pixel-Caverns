@@ -406,8 +406,8 @@ bool initGame() {
 
     SetSoundVolume(assetManager.talkSound, 0.7f);
 
-    SetSoundVolume(assetManager.pickaxeHit, 0.3f);
-    SetSoundVolume(assetManager.pickaxeHit_echo, 0.4f);
+    if (IsSoundValid(assetManager.pickaxeHit)) SetSoundVolume(assetManager.pickaxeHit, 0.3f);
+    if (IsSoundValid(assetManager.pickaxeHit_echo)) SetSoundVolume(assetManager.pickaxeHit_echo, 0.4f);
 #pragma endregion
 
     generateSeed(worldSeed);
@@ -526,7 +526,7 @@ bool updateGame() {
     }
 
     gameData.player.physics.updateFinal();
-    gameData.player.update_pickaxe(dt, assetManager);
+    gameData.player.update_pickaxe(dt);
     if (gameData.player.physics.transform.pos.y >= 101) {
         hasEnteredDeepslate = true;
     }
@@ -765,11 +765,10 @@ bool updateGame() {
 
                         if (b.type == Block::gold) {
                             Color goldColor = {255, 244, 134, 80};
-                            DrawCircleGradient((int) screenPos.x, (int) screenPos.y, oreGlowRadius, goldColor, BLANK);
+                            DrawCircleGradient(screenPos, oreGlowRadius, goldColor, BLANK);
                         } else if (b.type == Block::diamond) {
                             Color diamondColor = {151, 223, 250, 80};
-                            DrawCircleGradient((int) screenPos.x, (int) screenPos.y, oreGlowRadius, diamondColor,
-                                               BLANK);
+                            DrawCircleGradient(screenPos, oreGlowRadius, diamondColor, BLANK);
                         }
                     }
                 }
@@ -792,7 +791,7 @@ bool updateGame() {
                 Color lightColor = {255, 210, 210, finalAlpha};
                 float lightRadius = 400.0f;
 
-                DrawCircleGradient((int) screenPlayerPos.x, (int) screenPlayerPos.y, lightRadius, lightColor, BLANK);
+                DrawCircleGradient(screenPlayerPos, lightRadius, lightColor, BLANK);
             }
 
             EndBlendMode();

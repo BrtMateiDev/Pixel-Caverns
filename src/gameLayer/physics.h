@@ -5,84 +5,6 @@
 #include <raylib.h>
 #include <raymath.h>
 
-#pragma region Defining vector operations
-//This is function overloading
-//Note where I put "&" before "operator" and where I put "const" before the parameters
-inline Vector2 operator+(const Vector2 &a, const Vector2 &b) {
-    return {a.x + b.x, a.y + b.y};
-}
-
-inline Vector2 operator-(const Vector2 &a, const Vector2 &b) {
-    return {a.x - b.x, a.y - b.y};
-}
-
-inline Vector2 operator*(const Vector2 &a, float scalar) {
-    return {a.x * scalar, a.y * scalar};
-}
-
-inline Vector2 operator/(const Vector2 &a, float scalar) {
-    return {a.x / scalar, a.y / scalar};
-}
-
-
-inline Vector2 &operator*=(Vector2 &a, float scalar) {
-    a.x *= scalar;
-    a.y *= scalar;
-    return a;
-}
-
-inline Vector2 &operator/=(Vector2 &a, float scalar) {
-    a.x /= scalar;
-    a.y /= scalar;
-    return a;
-}
-
-inline Vector2 &operator+=(Vector2 &a, float scalar) {
-    a.x += scalar;
-    a.y += scalar;
-    return a;
-}
-
-inline Vector2 &operator-=(Vector2 &a, float scalar) {
-    a.x -= scalar;
-    a.y -= scalar;
-    return a;
-}
-
-
-inline bool operator==(const Vector2 &a, const Vector2 &b) {
-    return a.x == b.x && a.y == b.y;
-}
-
-inline bool operator!=(const Vector2 &a, const Vector2 &b) {
-    return !(a == b);
-}
-
-inline Vector2 &operator+=(Vector2 &a, const Vector2 &b) {
-    a.x += b.x;
-    a.y += b.y;
-    return a;
-}
-
-inline Vector2 &operator-=(Vector2 &a, const Vector2 &b) {
-    a.x -= b.x;
-    a.y -= b.y;
-    return a;
-}
-
-inline Vector2 &operator*=(Vector2 &a, const Vector2 &b) {
-    a.x *= b.x;
-    a.y *= b.y;
-    return a;
-}
-
-inline Vector2 &operator/=(Vector2 &a, const Vector2 &b) {
-    a.x /= b.x;
-    a.y /= b.y;
-    return a;
-}
-#pragma endregion
-
 struct Transform2D {
     Vector2 pos = {}; //center
     float w = 0;
@@ -158,7 +80,6 @@ struct PhysicalEntity {
     }
 
     void updateForces(float dt) {
-        //Notice how useful the vector operations are!
         velocity += acceleration * dt;
         transform.pos += velocity * dt;
 

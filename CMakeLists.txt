@@ -14,7 +14,7 @@ project("Pixel Caverns")
 
 set(EXE_NAME "PixelCaverns")
 
-add_subdirectory(thirdparty/raylib-5.0)
+add_subdirectory(thirdparty/raylib-6.0)
 # add_subdirectory(thirdparty/imgui-docking)
 # add_subdirectory(thirdparty/rlImGui)
 
@@ -54,7 +54,7 @@ if (MSVC) # Visual Studio
     endif ()
 
 elseif (MINGW) #MinGW to Windows
-    target_compile_options(${EXE_NAME} PRIVATE -mavx2 -mfma)
+    target_compile_options(${EXE_NAME} PRIVATE -mno-avx -mstackrealign)
 
     #Including dlls in the exe to avoid dependencies
     target_link_options(${EXE_NAME} PRIVATE
