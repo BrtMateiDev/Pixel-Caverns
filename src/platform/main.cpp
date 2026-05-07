@@ -1,6 +1,4 @@
 #include <raylib.h>
-#include <imgui.h>
-#include <rlImGui.h>
 #include "gameMain.h"
 
 int main() {
@@ -11,13 +9,10 @@ int main() {
 	SetConfigFlags(FLAG_WINDOW_RESIZABLE);
 	InitWindow(GetScreenWidth(), GetScreenHeight(), "Pixel Caverns");
 	InitAudioDevice(); //audio setup
-	SetTargetFPS(240);
+	SetExitKey(KEY_NULL);
+	SetTargetFPS(144);
 	//ToggleFullscreen();
-	rlImGuiSetup(true);
 
-	ImGuiIO &io = ImGui::GetIO();
-	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-	io.FontGlobalScale = 1.3;
 #pragma endregion
 
 	if (!initGame()) {
@@ -27,34 +22,18 @@ int main() {
 	while (!WindowShouldClose()) {
 		BeginDrawing();
 		ClearBackground(BLACK);
-		rlImGuiBegin();
 
-		//This disables the generation of ImGui.ini and in-game dragging
-		ImGui::CreateContext();
-		ImGuiIO &io = ImGui::GetIO();
-		io.IniFilename = nullptr;
+		bool keepRunning = updateGame();
 
-#pragma region imgui_docking
-		/*
-		 ==DISABLED==
-		ImGui::PushStyleColor(ImGuiCol_WindowBg, {});
-		ImGui::PushStyleColor(ImGuiCol_DockingEmptyBg, {});
-		ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
-		ImGui::PopStyleColor(2);
-		*/
-#pragma endregion
-
-		if (!updateGame()) {
-			CloseWindow();
-		}
-
-		rlImGuiEnd();
 		EndDrawing();
+
+		if (!keepRunning) {
+			break;
+		}
 	}
 
 	CloseAudioDevice();
 	CloseWindow();
-	rlImGuiShutdown();
 
 	return 0;
 }

@@ -1,9 +1,9 @@
 #include <raylib.h>
-#include <imgui.h>
 #include <vector>
 #include <string>
 #include <algorithm>
 #include <random>
+#include <fstream>
 #include "gameMain.h"
 #include "assetManager.h"
 #include "helpers.h"
@@ -12,13 +12,16 @@
 #include "player.h"
 #include "pickaxe.h"
 #include "storage.h"
+#include "dialogue.h"
 
-static int maxCapacity = 300;
+static bool isPaused = false;
+
+static int maxCapacity = 500;
 
 static bool hitbox_toggle = false;
 static bool storage_toggle = false;
 static bool forge_toggle = false;
-static bool music_toggle = true;
+static bool music_toggle = false;
 
 static bool canMove = true;
 
@@ -30,6 +33,8 @@ static bool worldResetTriggered = false;
 
 static bool isTeleporting = false;
 static float teleportTimer = 0.0f;
+static float introFadeTimer = 3.f;
+
 static bool teleportMapSwitched = false;
 static int teleportDestination = 0; // 0 is the mine, 1 is the base
 
@@ -74,9 +79,77 @@ std::vector<OreItem> getSortedOres(const std::unordered_map<unsigned short int, 
     return items;
 }
 
+void saveGame() {
+    std::ofstream fin(RESOURCES_PATH "save.dat");
+    if (!fin.is_open()) return;
+
+    fin << hasSeenIntro << " " << hasEnteredDeepslate << " " << music_toggle << " " << gameData.player.currentPickaxe <<
+            "\n";
+
+    for (int i = 0; i < PickaxeType::COUNT; i++) {
+        fin << gameData.player.unlockedPickaxes[i] << " ";
+    }
+    fin << "\n";
+
+    fin << gameData.player.inventory.minedOres.size() << "\n";
+    for (const auto &[type, amount]: gameData.player.inventory.minedOres) {
+        fin << type << " " << amount << "\n";
+    }
+
+    fin << storage.storedOres.size() << "\n";
+    for (const auto &[type, amount]: storage.storedOres) {
+        fin << type << " " << amount << "\n";
+    }
+
+    fin.close();
+}
+
+void loadGame() {
+    std::ifstream fin(RESOURCES_PATH "save.dat");
+    if (!fin.is_open()) return; //No file means fresh game
+
+    fin >> hasSeenIntro >> hasEnteredDeepslate >> music_toggle >> gameData.player.currentPickaxe;
+
+    for (int i = 0; i < PickaxeType::COUNT; i++) {
+        fin >> gameData.player.unlockedPickaxes[i];
+    }
+
+    size_t invSize;
+    fin >> invSize;
+    gameData.player.inventory.minedOres.clear();
+    for (size_t i = 0; i < invSize; i++) {
+        unsigned short type;
+        unsigned int amount;
+        fin >> type >> amount;
+        gameData.player.inventory.minedOres[type] = amount;
+    }
+
+    size_t storageSize;
+    fin >> storageSize;
+    storage.storedOres.clear();
+    for (size_t i = 0; i < storageSize; i++) {
+        unsigned short type;
+        unsigned int amount;
+        fin >> type >> amount;
+        storage.storedOres[type] = amount;
+    }
+
+    fin.close();
+}
+
+void startDialogue(const std::vector<std::string> &textSequence) {
+    activeDialogue = textSequence;
+    dialoguePageIndex = 0;
+    dialogueCharCount = 0;
+    dialogueTimer = 0.0f;
+    isDialogueActive = true;
+    diagState = DIALOGUE_TALKING;
+    canMove = false;
+}
+
 void execute_tp_mine() {
     gameData.activeMap = &gameData.worldMap;
-    gameData.player.teleport({20, 0});
+    gameData.player.teleport({0, 0});
     gameData.player.facingDirection = 1;
     gameData.player.speed = 7;
 }
@@ -198,6 +271,7 @@ void open_forge() {
                     }
                 }
                 gameData.player.unlockedPickaxes[selectedForgePickaxe] = true;
+                PlaySound(assetManager.craft);
             }
 
             gameData.player.currentPickaxe = selectedForgePickaxe;
@@ -244,7 +318,7 @@ void draw_inventory() {
 
     // Red fill based on the amount of total ores
     DrawRectangle(barX, barY, barWidth * fillRatio, barHeight, RED);
-    const char *capText = TextFormat("%d / 300", totalOres);
+    const char *capText = TextFormat("%d / 500", totalOres);
     int capTextWidth = MeasureText(capText, 20);
     DrawText(capText, barX + (barWidth / 2.0f) - (capTextWidth / 2.0f), barY + 10.0f, 20, WHITE);
 }
@@ -309,19 +383,31 @@ bool initGame() {
     PlayMusicStream(assetManager.backgroundMusic);
 
     SetMusicVolume(assetManager.backgroundMusic, 0.2f);
+
     SetSoundPitch(assetManager.uiOpen, 0.5f);
     SetSoundVolume(assetManager.uiOpen, 0.5f);
+
     SetSoundPitch(assetManager.uiClose, 0.5f);
     SetSoundVolume(assetManager.uiClose, 0.5f);
+
     SetSoundPitch(assetManager.jump, 0.5f);
     SetSoundVolume(assetManager.jump, 0.5f);
+
     SetSoundPitch(assetManager.sleep, 0.5f);
     SetSoundVolume(assetManager.sleep, 0.5f);
-    SetSoundPitch(assetManager.teleport, 0.5f);
+    SetSoundVolume(assetManager.talkSound, 0.5f);
+    SetSoundPitch(assetManager.talkSound, 0.5f);
+
     SetSoundVolume(assetManager.teleport, 0.5f);
+    SetSoundPitch(assetManager.teleport, 0.5f);
+
+    SetSoundVolume(assetManager.craft, 0.7f);
+    SetSoundPitch(assetManager.craft, 0.8f);
+
+    SetSoundVolume(assetManager.talkSound, 0.7f);
+
     SetSoundVolume(assetManager.pickaxeHit, 0.3f);
     SetSoundVolume(assetManager.pickaxeHit_echo, 0.4f);
-    SetSoundVolume(assetManager.pickaxeHit_more_echo, 0.4f);
 #pragma endregion
 
     generateSeed(worldSeed);
@@ -331,13 +417,16 @@ bool initGame() {
     gameData.baseMap.usesOracle = false;
 
     generatePlayerBase(gameData.baseMap);
-    gameData.activeMap = &gameData.worldMap;
+    gameData.activeMap = &gameData.baseMap;
+
+    loadGame();
 
     gameData.camera.target = {20.f, 120.f};
     gameData.camera.rotation = 0.0f;
     gameData.camera.zoom = 200.0f;
 
-    gameData.player.teleport({20, 0});
+    gameData.player.teleport({6, 7});
+    gameData.player.facingDirection = -1;
 
     return true;
 }
@@ -347,15 +436,22 @@ bool updateGame() {
     //this is delta time which calculates the amount of time between the last and current frames
     if (dt > 1.f / 5) dt = 1.f / 5; //dt is capped at 1/5 in case of lag spikes
 
-    if (music_toggle) UpdateMusicStream(assetManager.backgroundMusic);
+    if (IsKeyPressed(KEY_ESCAPE) && diagState == DIALOGUE_IDLE && !isSleeping && !isTeleporting) {
+        isPaused = !isPaused;
+    }
+    if (isPaused) dt = 0;
+
+#pragma region music updating
+
+    if (music_toggle && introFadeTimer <= 0 && hasSeenIntro) UpdateMusicStream(assetManager.backgroundMusic);
 
     if (gameData.activeMap == &gameData.worldMap) {
         float baseVolume = 0.2f; //20% base volume
         float currentVolume = baseVolume;
 
         float playerY = gameData.player.physics.transform.pos.y;
-        float fadeStartY = 40.0f; //the depth where the music starts fading away
-        float fadeEndY = 150.0f; //the depth where the music becomes completely silent
+        float fadeStartY = 75.0f; //the depth where the music starts fading away
+        float fadeEndY = 100.0f; //the depth where the music becomes completely silent
 
         if (playerY > fadeStartY) {
             float fadeRatio = (playerY - fadeStartY) / (fadeEndY - fadeStartY);
@@ -368,6 +464,8 @@ bool updateGame() {
     } else {
         SetMusicVolume(assetManager.backgroundMusic, 0.2f);
     }
+
+#pragma endregion
 
     gameData.camera.offset = {GetScreenWidth() / 2.0f, GetScreenHeight() / 2.0f};
 
@@ -429,7 +527,9 @@ bool updateGame() {
 
     gameData.player.physics.updateFinal();
     gameData.player.update_pickaxe(dt, assetManager);
-
+    if (gameData.player.physics.transform.pos.y >= 101) {
+        hasEnteredDeepslate = true;
+    }
 #pragma endregion
 
 #pragma region mouse and keyboard actions
@@ -480,7 +580,7 @@ bool updateGame() {
 
     if (IsKeyPressed(KEY_SEVEN)) gameData.player.currentPickaxe = PickaxeType::God;
     if (IsKeyPressed(KEY_EIGHT)) maxCapacity = 99999;
-    if (IsKeyPressed(KEY_NINE)) maxCapacity = 300;
+    if (IsKeyPressed(KEY_NINE)) maxCapacity = 500;
 
 #pragma endregion
 
@@ -701,6 +801,7 @@ bool updateGame() {
 #pragma endregion
 
 #pragma region HUD
+    //UI buttons and information (you can collapse the "if")
     if (gameData.activeMap == &gameData.worldMap) {
         float buttonSize = 120; //small offset (instead of 128) because the button has round corners
         int buttonIndex_tp = 1;
@@ -779,7 +880,6 @@ bool updateGame() {
                 WHITE
             );
         }
-
         int playerX = (int) floorf(gameData.player.physics.transform.pos.x);
         int playerY = (int) floorf(gameData.player.physics.transform.pos.y);
         const char *coordText = TextFormat("(X: %d; Y: %d)", playerX, playerY);
@@ -812,15 +912,18 @@ bool updateGame() {
 
     draw_inventory();
 
+    //Interaction prompts (you can collapse the "if")
     if (gameData.activeMap == &gameData.baseMap) {
         float px = gameData.player.physics.transform.pos.x;
-
         const char *prompt = nullptr;
-        if (px >= 5 && px <= 6) {
-            prompt = "Press [E] to talk to the researcher (NOT IMPLEMENTED)";
 
-            if (IsKeyPressed(KEY_E)) {
-                //TODO: ADD INTERACTION
+        if (px >= 5 && px <= 6 && introFadeTimer <= 0) {
+            if (diagState == DIALOGUE_IDLE && hasSeenIntro) {
+                prompt = "Press [E] to talk to the researcher";
+                if (IsKeyPressed(KEY_E) && diagState == DIALOGUE_IDLE && hasSeenIntro) {
+                    startDialogue(choosingDialogue);
+                    diagState = DIALOGUE_CHOOSING;
+                }
             }
         } else if (px >= 8 && px <= 13) {
             if (!storage_toggle)
@@ -865,7 +968,6 @@ bool updateGame() {
                 PlaySound(assetManager.teleport);
             }
         }
-
         if (storage_toggle) open_storage();
         if (forge_toggle) open_forge();
 
@@ -876,6 +978,21 @@ bool updateGame() {
             DrawRectangle((int) screenPos.x - textWidth / 2 - 5, (int) screenPos.y - 195, textWidth + 10, 50,
                           {0, 0, 0, 150});
             DrawText(prompt, (int) screenPos.x - textWidth / 2, (int) screenPos.y - 190, 40, YELLOW);
+        }
+    }
+
+#pragma region UI system logic
+    //Intro cutscene
+    if (introFadeTimer > 0) {
+        introFadeTimer -= dt;
+        canMove = false;
+
+        if (introFadeTimer <= 0) {
+            if (!hasSeenIntro && diagState == DIALOGUE_IDLE) {
+                startDialogue(introDialogue);
+            } else {
+                canMove = true;
+            }
         }
     }
 
@@ -913,6 +1030,71 @@ bool updateGame() {
             canMove = true;
         }
     }
+    if (diagState == DIALOGUE_CHOOSING) {
+        dialogueTimer += dt;
+        std::string currentLine = activeDialogue[0]; //0 because there's only one line
+
+        if (dialogueCharCount < currentLine.length() && dialogueTimer >= textSpeed) {
+            dialogueTimer = 0.0f;
+            dialogueCharCount++;
+
+            if (currentLine[dialogueCharCount - 1] != ' ') {
+                SetSoundPitch(assetManager.talkSound, GetRandomValue(95, 105) / 100.0f);
+                PlaySound(assetManager.talkSound);
+            }
+        }
+
+        if (IsKeyPressed(KEY_SPACE)) {
+            dialogueCharCount = currentLine.length();
+        }
+    }
+
+    if (diagState == DIALOGUE_TALKING) {
+        dialogueTimer += dt;
+        std::string currentLine = activeDialogue[dialoguePageIndex];
+
+        //This method is for printing text similar to a typewriter, often seen in most pixel games
+        if (dialogueCharCount < currentLine.length() && dialogueTimer >= textSpeed) {
+            dialogueTimer = 0.0f;
+            dialogueCharCount++;
+
+            if (currentLine[dialogueCharCount - 1] != ' ') {
+                SetSoundPitch(assetManager.talkSound, GetRandomValue(95, 105) / 100.0f);
+                PlaySound(assetManager.talkSound);
+            }
+        }
+
+        if (IsKeyPressed(KEY_SPACE)) {
+            if (dialogueCharCount < currentLine.length()) {
+                dialogueCharCount = currentLine.length(); //Skip the current dialogue
+            } else {
+                //Next page
+                dialoguePageIndex++;
+                dialogueCharCount = 0;
+                dialogueTimer = 0.0f;
+
+                if (dialoguePageIndex >= activeDialogue.size()) {
+                    diagState = DIALOGUE_IDLE;
+                    canMove = true;
+                    if (!hasSeenIntro) {
+                        hasSeenIntro = true;
+                        music_toggle = true; //Because it's off for the first time
+                    }
+                }
+            }
+        }
+    }
+#pragma endregion
+
+#pragma region UI system rendering
+    if (introFadeTimer > 0.0f) {
+        float alpha = introFadeTimer / 3.0f;
+        if (alpha < 0.0f) alpha = 0.0f;
+        if (alpha > 1.0f) alpha = 1.0f;
+
+        DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(BLACK, alpha));
+    }
+
 
     if (isSleeping) {
         float alpha = 0.0f;
@@ -949,22 +1131,154 @@ bool updateGame() {
             DrawText(tpText, GetScreenWidth() / 2 - textWidth / 2, GetScreenHeight() / 2, 40, WHITE);
         }
     }
+
+    if (diagState == DIALOGUE_CHOOSING) {
+        float uiScale = 3.0f;
+        float boxWidth = assetManager.researcherUI.width * uiScale;
+        float boxHeight = assetManager.researcherUI.height * uiScale;
+
+        float startX = roundf(GetScreenWidth() / 2.0f - boxWidth / 2.0f);
+        float startY = roundf(GetScreenHeight() - boxHeight - 20.0f);
+
+        DrawTextureEx(assetManager.researcherUI, {startX, startY}, 0.0f, uiScale, WHITE);
+        float textX = startX + (96.0f * uiScale) + (8.0f * uiScale);
+        float textY = startY + (12.0f * uiScale);
+
+        std::string currentLine = activeDialogue[0];
+        std::string visibleText = currentLine.substr(0, dialogueCharCount);
+
+        int yOffset = 0;
+        size_t start = 0;
+        size_t end = visibleText.find('\n');
+
+        //Note: npos is a returned value when some string functions fail
+        while (end != std::string::npos) {
+            std::string line = visibleText.substr(start, end - start);
+            DrawText(line.c_str(), textX, textY + yOffset, 40, DARKGRAY);
+
+            yOffset += 45;
+
+            start = end + 1;
+            end = visibleText.find('\n', start);
+        }
+        std::string lastLine = visibleText.substr(start);
+        //Note: c_str is able to return a pointer to '\0' (NULL)
+        DrawText(lastLine.c_str(), textX, textY + yOffset, 40, DARKGRAY);
+
+        if (dialogueCharCount == currentLine.length()) {
+            int numButtons = 4;
+            float spacing = 15.0f;
+            float btnWidth = (boxWidth - spacing * (numButtons - 1)) / numButtons;
+            float btnHeight = 40.0f;
+            float btnY = startY - btnHeight - 10.0f;
+
+            const char *btnLabels[4] = {"OVERVIEW", "ORES", "TIPS", "EXIT"};
+
+            for (int i = 0; i < numButtons; i++) {
+                float btnX = startX + i * (btnWidth + spacing);
+                Rectangle btnRec = {btnX, btnY, btnWidth, btnHeight};
+                bool isHovered = CheckCollisionPointRec(GetMousePosition(), btnRec);
+
+                DrawRectangleRec(btnRec, isHovered ? Fade(BLACK, 0.8f) : Fade(BLACK, 0.5f));
+                DrawRectangleLinesEx(btnRec, 2, GRAY);
+
+                int textW = MeasureText(btnLabels[i], 20);
+                DrawText(btnLabels[i], btnX + (btnWidth / 2.0f) - (textW / 2.0f), btnY + 10, 20, WHITE);
+
+                if (isHovered && IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
+                    if (i == 0) {
+                        startDialogue(overviewDialogue);
+                    } else if (i == 1) {
+                        if (hasEnteredDeepslate) startDialogue(oresDeepslateDialogue);
+                        else startDialogue(oresDialogue);
+                    } else if (i == 2) {
+                        if (hasEnteredDeepslate) startDialogue(tipsDeepslateDialogue);
+                        else startDialogue(tipsDialogue);
+                    } else if (i == 3) {
+                        diagState = DIALOGUE_IDLE;
+                        canMove = true;
+                    }
+                }
+            }
+        }
+    }
+
+    if (diagState == DIALOGUE_TALKING) {
+        float uiScale = 3.0f;
+        float boxWidth = assetManager.researcherUI.width * uiScale;
+        float boxHeight = assetManager.researcherUI.height * uiScale;
+
+        float startX = roundf((GetScreenWidth() / 2.0f) - (boxWidth / 2.0f));
+        float startY = roundf(GetScreenHeight() - boxHeight - 20.0f);
+
+        DrawTextureEx(assetManager.researcherUI, {startX, startY}, 0.0f, uiScale, WHITE);
+        float textX = startX + (96.0f * uiScale) + (8.0f * uiScale);
+        float textY = startY + (12.0f * uiScale);
+
+        std::string currentLine = activeDialogue[dialoguePageIndex];
+        std::string visibleText = currentLine.substr(0, dialogueCharCount);
+
+        int yOffset = 0;
+        size_t start = 0;
+        size_t end = visibleText.find('\n');
+
+        while (end != std::string::npos) {
+            std::string line = visibleText.substr(start, end - start);
+            DrawText(line.c_str(), textX, textY + yOffset, 40, DARKGRAY);
+
+            yOffset += 45;
+
+            start = end + 1;
+            end = visibleText.find('\n', start);
+        }
+        std::string lastLine = visibleText.substr(start);
+        DrawText(lastLine.c_str(), textX, textY + yOffset, 40, DARKGRAY);
+
+        if (dialogueCharCount == currentLine.length()) {
+            /* Makes the promp blink. May seem confusing, but all the logic is that even numbered seconds
+            show the prompt, whilst uneven don't. For example, multiplying by two makes the effect
+            happen every 0.5 seconds. */
+            if ((int) (GetTime() * 2) % 2 == 0) {
+                DrawText("Press [SPACE] to skip", startX + boxWidth - 380.0f, startY + boxHeight - 60.0f, 30, YELLOW);
+            }
+        }
+    }
+
+    if (isPaused) {
+        DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(BLACK, 0.7f));
+
+        int titleW = MeasureText("PAUSED", 60);
+        DrawText("PAUSED", GetScreenWidth() / 2 - titleW / 2, GetScreenHeight() / 2 - 150, 60, WHITE);
+
+        float btnWidth = 250.0f;
+        float btnHeight = 50.0f;
+        float startX = GetScreenWidth() / 2.0f - btnWidth / 2.0f;
+        float startY = GetScreenHeight() / 2.0f - 30.0f;
+
+        const char *btnLabels[2] = {"RESUME", "SAVE & QUIT"};
+
+        for (int i = 0; i < 2; i++) {
+            float btnY = startY + i * (btnHeight + 20.0f);
+            Rectangle btnRec = {startX, btnY, btnWidth, btnHeight};
+            bool isHovered = CheckCollisionPointRec(GetMousePosition(), btnRec);
+
+            DrawRectangleRec(btnRec, isHovered ? Fade(BLACK, 0.8f) : Fade(BLACK, 0.5f));
+            DrawRectangleLinesEx(btnRec, 2, GRAY);
+
+            int textW = MeasureText(btnLabels[i], 20);
+            DrawText(btnLabels[i], startX + (btnWidth / 2.0f) - (textW / 2.0f), btnY + 15, 20, WHITE);
+
+            if (isHovered && IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
+                if (i == 0) {
+                    isPaused = false;
+                } else if (i == 1) {
+                    saveGame();
+                    return false;
+                }
+            }
+        }
+    }
 #pragma endregion
-
-#pragma region imgui_windows
-
-    ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
-    ImGui::SetNextWindowSize(ImVec2(300, 200), ImGuiCond_Always);
-
-    ImGui::Begin("Dev tools");
-
-    ImGui::SliderFloat("Camera zoom", &gameData.camera.zoom, 5, 250);
-    ImGui::SliderFloat("Player speed", &gameData.player.speed, 1, 100);
-    ImGui::Checkbox("Show player hitbox", &hitbox_toggle);
-
-    ImGui::Text("FPS: %d", GetFPS());
-
-    ImGui::End();
 
 #pragma endregion
 
@@ -972,5 +1286,6 @@ bool updateGame() {
 }
 
 void closeGame() {
+    saveGame();
     assetManager.unloadAll();
 }

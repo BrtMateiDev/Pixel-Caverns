@@ -8,4 +8,4 @@ bool updateGame();
 
 void closeGame();
 
-#endif //MYGAME_GAMEMAIN_H
+#endif

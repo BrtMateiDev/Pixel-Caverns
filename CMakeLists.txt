@@ -15,8 +15,8 @@ project("Pixel Caverns")
 set(EXE_NAME "PixelCaverns")
 
 add_subdirectory(thirdparty/raylib-5.0)
-add_subdirectory(thirdparty/imgui-docking)
-add_subdirectory(thirdparty/rlImGui)
+# add_subdirectory(thirdparty/imgui-docking)
+# add_subdirectory(thirdparty/rlImGui)
 
 file(GLOB_RECURSE MY_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 
@@ -27,6 +27,7 @@ add_executable(${EXE_NAME}
         src/gameLayer/blocks.cpp
         src/gameLayer/pickaxe.h
         src/gameLayer/pickaxe.cpp
+        src/gameLayer/dialogue.h
 )
 
 # This is the magic line that makes the actual .exe have a space in its name!
@@ -77,4 +78,4 @@ target_include_directories(${EXE_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src/p
 target_include_directories(${EXE_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src/gameLayer")
 target_include_directories(${EXE_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/FastNoiseLite")
 
-target_link_libraries(${EXE_NAME} PRIVATE raylib imgui rlimgui)
+target_link_libraries(${EXE_NAME} PRIVATE raylib) # don't forget to add imgui and rlimgui back when needed

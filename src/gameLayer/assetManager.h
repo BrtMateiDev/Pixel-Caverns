@@ -15,15 +15,17 @@ struct AssetManager {
     Texture2D forgeButtons = {};
     Texture2D inventoryUI = {};
     Texture2D storageUI = {};
+    Texture2D researcherUI = {};
 
     Sound uiOpen;
     Sound uiClose;
     Sound pickaxeHit;
-    Sound pickaxeHit_echo; //currently broken
-    Sound pickaxeHit_more_echo; //currently broken
+    Sound pickaxeHit_echo;
     Sound jump;
     Sound sleep;
     Sound teleport;
+    Sound craft;
+    Sound talkSound;
 
     Music backgroundMusic;
 

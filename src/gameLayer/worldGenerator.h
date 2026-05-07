@@ -111,6 +111,23 @@ public:
         return nullptr;
     }
 
+    bool isCave(int x, int y) {
+        const LayerDef *layer = getLayerAt(y);
+        if (!layer) return false;
+
+        float noiseValue = noise.GetNoise((float) x, (float) y);
+        return noiseValue <= layer->caveThreshold;
+    }
+
+    bool isNearCave(int px, int py) {
+        for (int y = py - 2; y <= py + 2; y++) {
+            for (int x = px - 2; x <= px + 2; x++) {
+                if (isCave(x, y)) return true;
+            }
+        }
+        return false;
+    }
+
     //Initializing the parameters the noise function will use with just the seed
     void init(int seed) {
         worldSeed = seed;
