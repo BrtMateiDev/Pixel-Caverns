@@ -135,7 +135,7 @@ struct Transform2D {
     }
 };
 
-//This is a forward reference for using the address of mapData
+//This is a forward declaration for using the address of mapData
 struct GameMap;
 
 struct PhysicalEntity {
@@ -181,8 +181,12 @@ struct PhysicalEntity {
         acceleration += {0, 20.f}; //arbitrary value
     }
 
-    void jump(float force) {
-        if (downTouch) velocity.y = -force;
+    bool jump(float force) {
+        if (downTouch) {
+            velocity.y = -force;
+            return true;
+        }
+        return false;
     }
 
     //called at the end of the frame

@@ -31,9 +31,11 @@ struct Player : public Entity {
 
     int currentPickaxe = PickaxeType::Wood;
     bool unlockedPickaxes[PickaxeType::COUNT] = {true, false, false, false, false, false};
+
     bool isSwinging = false;
     float swingTimer = 0.0f;
     float maxSwingTime = 0.30f;
+    bool soundPlayedThisSwing = false;
 
     float speed = 7;
 
@@ -59,6 +61,7 @@ struct Player : public Entity {
         if (!isSwinging) {
             isSwinging = true;
             swingTimer = 0.0f;
+            soundPlayedThisSwing = false;
         }
     }
 
@@ -66,16 +69,7 @@ struct Player : public Entity {
 
     bool update(float deltaTime, EntityUpdateData entityUpdateData) override;
 
-    bool update_pickaxe(float deltaTime) {
-        //Updating the pickaxe swing
-        if (isSwinging) {
-            swingTimer += deltaTime;
-            if (swingTimer >= maxSwingTime) {
-                isSwinging = false;
-            }
-        }
-        return true;
-    };
+    bool update_pickaxe(float deltaTime, AssetManager &assetManager);
 
     int getEntityType() { return EntityType_Player; }
 

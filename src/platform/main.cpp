@@ -10,6 +10,7 @@ int main() {
 #pragma region initializations
 	SetConfigFlags(FLAG_WINDOW_RESIZABLE);
 	InitWindow(GetScreenWidth(), GetScreenHeight(), "Pixel Caverns");
+	InitAudioDevice(); //audio setup
 	SetTargetFPS(240);
 	//ToggleFullscreen();
 	rlImGuiSetup(true);
@@ -51,6 +52,7 @@ int main() {
 		EndDrawing();
 	}
 
+	CloseAudioDevice();
 	CloseWindow();
 	rlImGuiShutdown();
 

@@ -40,8 +40,8 @@ void Player::render(AssetManager &assetManager) {
             assetManager.pickaxe,
             sourceRec,
             destRec,
-            pickPivot, // Pivots around the hand
-            currentAngle, // Rotates over time
+            pickPivot,
+            currentAngle,
             WHITE
         );
 
@@ -70,6 +70,34 @@ void Player::render(AssetManager &assetManager) {
         0.0f,
         WHITE
     );
+}
+
+bool Player::update_pickaxe(float deltaTime, AssetManager &assetManager) {
+    if (isSwinging) {
+        swingTimer += deltaTime;
+        float swingProgress = swingTimer / maxSwingTime;
+
+        if (swingProgress >= 0.5f && !soundPlayedThisSwing) {
+            if (physics.transform.pos.y <= 100) {
+                SetSoundPitch(assetManager.pickaxeHit, GetRandomValue(70, 130) / 100.0f);
+                PlaySound(assetManager.pickaxeHit);
+                soundPlayedThisSwing = true;
+            } else if (physics.transform.pos.y >= 101 && physics.transform.pos.y <= 149) {
+                SetSoundPitch(assetManager.pickaxeHit_echo, GetRandomValue(50, 110) / 100.0f);
+                PlaySound(assetManager.pickaxeHit_echo);
+                soundPlayedThisSwing = true;
+            } else {
+                SetSoundPitch(assetManager.pickaxeHit_more_echo, GetRandomValue(50, 90) / 100.0f);
+                PlaySound(assetManager.pickaxeHit_more_echo);
+                soundPlayedThisSwing = true;
+            }
+        }
+
+        if (swingTimer >= maxSwingTime) {
+            isSwinging = false;
+        }
+    }
+    return true;
 }
 
 bool Player::update(float deltaTime, EntityUpdateData entityUpdateData) {

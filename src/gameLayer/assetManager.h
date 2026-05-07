@@ -16,7 +16,21 @@ struct AssetManager {
     Texture2D inventoryUI = {};
     Texture2D storageUI = {};
 
+    Sound uiOpen;
+    Sound uiClose;
+    Sound pickaxeHit;
+    Sound pickaxeHit_echo; //currently broken
+    Sound pickaxeHit_more_echo; //currently broken
+    Sound jump;
+    Sound sleep;
+    Sound teleport;
+
+    Music backgroundMusic;
+
     void loadAll();
+
+    //WHY DID I FORGET TO ADD THIS EARLIER, I WAS CAUSING GPU MEMORY LEAKS ALL THIS TIME WITHOUT REALIZING
+    void unloadAll();
 };
 
 #endif

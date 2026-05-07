@@ -23,9 +23,9 @@ struct BlockProperties {
     bool isMineable = true;
 
     float durability = 1.0f;
-    short textureIndex = 0; //in row 1
-    short oreIndex = 0; //in row 2
-    short bgIndex = 0; //in row 3
+    short textureIndex = 0; //in the first row
+    short oreIndex = 0; //in the second row
+    short bgIndex = 0; //in the third row
 
     int dropType = -1;
     //If not -1, it means the mined block will be different (ex: all stone variants should be stored into "Stone")
@@ -58,7 +58,7 @@ struct Block {
     };
 
     std::uint16_t type = 0; //each block will be represented by a 16-bit number
-    std::uint16_t bgTexture = 0; // Stores the texture index from Row 1
+    std::uint16_t bgTexture = 0;
 
     void sanitize() {
         if (type >= BLOCKS_COUNT) type = 0;

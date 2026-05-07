@@ -1,16 +1,16 @@
 # Changelog:
 
-## Big UI and graphics update:
+## Sounds and music update:
 
-* New UI: Storage and Inventory
-* New sleep function: Reset the mine
-* New teleport animation
-* New darkness effect based on depth + player and ore glow
-* Op dev tools: Press 7 to get the God Pickaxe, 8 to expand inventory capacity, and 9 to revert it back to 300
-* Other bug fixes
+* New global background music
+* New sound effects:
+    * Opening/Closing UI windows
+    * Jumping
+    * Mining
+    * Sleeping
+    * Teleporting
 
 ## Current to-do list:
 
 * Add the researcher and his dialogue
-* Fix awkward physics
-* Sound effects
+

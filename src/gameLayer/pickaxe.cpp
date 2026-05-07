@@ -1,5 +1,4 @@
 #include "pickaxe.h"
-
 #include "blocks.h"
 
 PickaxeProperties PickaxeRegistry[PickaxeType::COUNT];

@@ -18,6 +18,7 @@ static int maxCapacity = 300;
 static bool hitbox_toggle = false;
 static bool storage_toggle = false;
 static bool forge_toggle = false;
+static bool music_toggle = true;
 
 static bool canMove = true;
 
@@ -47,9 +48,6 @@ struct GameData {
     float miningProgress = 0;
     int lastMinedX = -1;
     int lastMinedY = -1;
-
-    //EntityHolder entities;
-    //EntityHolder *activeEntities = nullptr;
 } gameData;
 
 AssetManager assetManager;
@@ -90,13 +88,12 @@ void execute_tp_base() {
     gameData.player.speed = 5;
 }
 
-// --- THE CINEMATIC TRIGGERS ---
 void tp_mine() {
     if (!isTeleporting && !isSleeping) {
         isTeleporting = true;
         teleportTimer = 0.0f;
         teleportMapSwitched = false;
-        teleportDestination = 0; // Go to mine
+        teleportDestination = 0;
         canMove = false;
     }
 }
@@ -106,7 +103,7 @@ void tp_base() {
         isTeleporting = true;
         teleportTimer = 0.0f;
         teleportMapSwitched = false;
-        teleportDestination = 1; // Go to base
+        teleportDestination = 1;
         canMove = false;
     }
 }
@@ -131,7 +128,6 @@ void open_forge() {
             }
         }
 
-        // Highlight the selected pickaxe
         if (selectedForgePickaxe == i) {
             DrawRectangleLinesEx(btnRec, 4, YELLOW);
         }
@@ -159,20 +155,19 @@ void open_forge() {
     bool isCrafted = gameData.player.unlockedPickaxes[selectedForgePickaxe];
     bool isEquipped = (gameData.player.currentPickaxe == selectedForgePickaxe);
 
-    // Determine the state (Now with 4 states!)
-    int buttonIndex = 0; // "CRAFT PICKAXE!"
+    int buttonIndex = 0; // "CRAFT PICKAXE!" button
     if (isEquipped) {
-        buttonIndex = 3; // "ALREADY EQUIPPED!"
+        buttonIndex = 3; // "ALREADY EQUIPPED!" button
     } else if (isCrafted) {
-        buttonIndex = 2; // "EQUIP PICKAXE!"
+        buttonIndex = 2; // "EQUIP PICKAXE!" button
     } else if (!canAfford) {
-        buttonIndex = 1; // "NOT ENOUGH ORES!"
+        buttonIndex = 1; // "NOT ENOUGH ORES!" button
     } else {
         buttonIndex = 0;
     }
 
     Rectangle craftBtnRec = {startX + 28.0f, startY + 396.0f, 328.0f, 40.0f};
-    Rectangle sourceRec = {buttonIndex * 164.0f, 0.0f, 164.0f, 20.0f}; //buttons are 164 pixels in lenght
+    Rectangle sourceRec = {buttonIndex * 164.0f, 0.0f, 164.0f, 20.0f}; //buttons are 164 pixels in length
 
     DrawTexturePro(
         assetManager.forgeButtons,
@@ -300,8 +295,8 @@ int worldSeed;
 
 void generateSeed(int &worldSeed) {
     std::random_device rd;
-    std::mt19937 gen(rd()); //Mersenne Twister
-    std::uniform_int_distribution<int> dist(-2147483647, 2147483647); //32-bit integers
+    std::mt19937 gen(rd()); //Mersenne Twister, an industry standard random seed generator
+    std::uniform_int_distribution<int> dist(-2147483647, 2147483647); //32-bit integer range for the seed
     worldSeed = dist(gen);
 }
 
@@ -310,12 +305,30 @@ bool initGame() {
 
     initBlockRegistry();
     initPickaxeRegistry();
+#pragma region sounds
+    PlayMusicStream(assetManager.backgroundMusic);
+
+    SetMusicVolume(assetManager.backgroundMusic, 0.2f);
+    SetSoundPitch(assetManager.uiOpen, 0.5f);
+    SetSoundVolume(assetManager.uiOpen, 0.5f);
+    SetSoundPitch(assetManager.uiClose, 0.5f);
+    SetSoundVolume(assetManager.uiClose, 0.5f);
+    SetSoundPitch(assetManager.jump, 0.5f);
+    SetSoundVolume(assetManager.jump, 0.5f);
+    SetSoundPitch(assetManager.sleep, 0.5f);
+    SetSoundVolume(assetManager.sleep, 0.5f);
+    SetSoundPitch(assetManager.teleport, 0.5f);
+    SetSoundVolume(assetManager.teleport, 0.5f);
+    SetSoundVolume(assetManager.pickaxeHit, 0.3f);
+    SetSoundVolume(assetManager.pickaxeHit_echo, 0.4f);
+    SetSoundVolume(assetManager.pickaxeHit_more_echo, 0.4f);
+#pragma endregion
 
     generateSeed(worldSeed);
     oracle.init(worldSeed);
 
     gameData.worldMap.usesOracle = true;
-    gameData.baseMap.usesOracle = false; //Turning off the generation for the base
+    gameData.baseMap.usesOracle = false;
 
     generatePlayerBase(gameData.baseMap);
     gameData.activeMap = &gameData.worldMap;
@@ -334,6 +347,28 @@ bool updateGame() {
     //this is delta time which calculates the amount of time between the last and current frames
     if (dt > 1.f / 5) dt = 1.f / 5; //dt is capped at 1/5 in case of lag spikes
 
+    if (music_toggle) UpdateMusicStream(assetManager.backgroundMusic);
+
+    if (gameData.activeMap == &gameData.worldMap) {
+        float baseVolume = 0.2f; //20% base volume
+        float currentVolume = baseVolume;
+
+        float playerY = gameData.player.physics.transform.pos.y;
+        float fadeStartY = 40.0f; //the depth where the music starts fading away
+        float fadeEndY = 150.0f; //the depth where the music becomes completely silent
+
+        if (playerY > fadeStartY) {
+            float fadeRatio = (playerY - fadeStartY) / (fadeEndY - fadeStartY);
+            if (fadeRatio > 1.0f) fadeRatio = 1.0f;
+
+            currentVolume = baseVolume * (1.0f - fadeRatio);
+        }
+
+        SetMusicVolume(assetManager.backgroundMusic, currentVolume);
+    } else {
+        SetMusicVolume(assetManager.backgroundMusic, 0.2f);
+    }
+
     gameData.camera.offset = {GetScreenWidth() / 2.0f, GetScreenHeight() / 2.0f};
 
     ClearBackground({75, 75, 150, 255});
@@ -351,11 +386,15 @@ bool updateGame() {
         gameData.player.facingDirection = 1;
     }
 
-    if (IsKeyDown(KEY_SPACE) && gameData.activeMap == &gameData.worldMap) gameData.player.physics.jump(10);
+    if (IsKeyDown(KEY_SPACE) && gameData.activeMap == &gameData.worldMap) {
+        if (gameData.player.physics.jump(10)) {
+            SetSoundPitch(assetManager.jump, GetRandomValue(90, 110) / 100.0f);
+            PlaySound(assetManager.jump);
+        }
+    }
 #pragma endregion
 
 #pragma region updating physics
-    //player
     gameData.player.physics.applyGravity();
     gameData.player.physics.updateForces(dt);
     gameData.player.physics.resolveConstraints(*gameData.activeMap);
@@ -363,7 +402,7 @@ bool updateGame() {
     gameData.camera.target = gameData.player.physics.transform.pos;
 
     if (gameData.activeMap == &gameData.baseMap) {
-        // Clamp X axis so we don't look past the walls
+        //clamping X axis so we don't look past the walls
         float screenWorldWidth = GetScreenWidth() / gameData.camera.zoom;
         float minX = screenWorldWidth / 2.0f;
         float maxX = 30.0f - (screenWorldWidth / 2.0f);
@@ -375,7 +414,7 @@ bool updateGame() {
             if (gameData.camera.target.x > maxX) gameData.camera.target.x = maxX;
         }
 
-        // Clamp Y axis dynamically
+        //again clamping, but for Y
         float screenWorldHeight = GetScreenHeight() / gameData.camera.zoom;
         float minY = screenWorldHeight / 2.0f;
         float maxY = 8.0f - (screenWorldHeight / 2.0f);
@@ -389,7 +428,7 @@ bool updateGame() {
     }
 
     gameData.player.physics.updateFinal();
-    gameData.player.update_pickaxe(dt);
+    gameData.player.update_pickaxe(dt, assetManager);
 
 #pragma endregion
 
@@ -408,7 +447,7 @@ bool updateGame() {
                 if (inRange) {
                     auto &b = gameData.worldMap.getBlock(blockX, blockY);
                     if (b.isMineable()) {
-                        // Check if we are mining a new block
+                        //Check if we are mining a new block
                         if (blockX != gameData.lastMinedX || blockY != gameData.lastMinedY) {
                             gameData.miningProgress = 0;
                             gameData.lastMinedX = blockX;
@@ -425,13 +464,13 @@ bool updateGame() {
                         gameData.player.startSwing();
                     }
                 } else {
-                    // Reset progress if trying to mine out of range
+                    //Resets the progress if we're trying to mine out of range
                     gameData.miningProgress = 0;
                     gameData.lastMinedX = -1;
                     gameData.lastMinedY = -1;
                 }
             } else {
-                // Reset progress if we release the button
+                //Reset the progress if we release the button
                 gameData.miningProgress = 0;
                 gameData.lastMinedX = -1;
                 gameData.lastMinedY = -1;
@@ -508,7 +547,7 @@ bool updateGame() {
                 const auto &props = BlockRegistry[b.type];
                 Rectangle destRect = {(float) x, (float) y, 1, 1};
 
-                // 1. Background blocks
+                //Background blocks
                 if (b.bgTexture) {
                     DrawTexturePro(
                         assetManager.textures,
@@ -520,7 +559,7 @@ bool updateGame() {
                     );
                 }
 
-                // 2. Blocks
+                //Blocks
                 if (b.type != Block::air) {
                     DrawTexturePro(
                         assetManager.textures,
@@ -533,7 +572,7 @@ bool updateGame() {
                     );
                 }
 
-                // 3. Ores
+                //Ores
                 if (props.oreIndex != Ore::none) {
                     DrawTexturePro(
                         assetManager.textures,
@@ -551,7 +590,7 @@ bool updateGame() {
 
 #pragma region visualizing block selection and mining cracks
     if (gameData.activeMap == &gameData.worldMap) {
-        // Draw the main selection highlight
+        //Main selection highlight
         auto &b = gameData.worldMap.getBlock(blockX, blockY);
         if (b.isMineable()) {
             DrawTexturePro(
@@ -564,11 +603,11 @@ bool updateGame() {
             );
         }
 
-        // Draw mining cracks if we are currently mining this block
+        //Mining cracks animation
         if (gameData.lastMinedX == blockX && gameData.lastMinedY == blockY && gameData.miningProgress > 0) {
             float durability = b.getDurability();
             if (durability > 0) {
-                int frame = (int) ((gameData.miningProgress / durability) * 4); // 4 frames
+                int frame = (int) ((gameData.miningProgress / durability) * 4); //4 frames
                 if (frame > 3) frame = 3;
 
                 DrawTexturePro(
@@ -593,7 +632,7 @@ bool updateGame() {
 
     EndMode2D();
 
-#pragma region Darkness effect
+#pragma region Shaders (somewhat)
     if (gameData.activeMap == &gameData.worldMap && !isSleeping && !isTeleporting) {
         float playerY = gameData.player.physics.transform.pos.y;
         float startDarkY = 20.0f;
@@ -605,7 +644,7 @@ bool updateGame() {
 
             DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(BLACK, darknessAlpha));
 
-            BeginBlendMode(BLEND_ADDITIVE); //Raylib's blending mode
+            BeginBlendMode(BLEND_ADDITIVE); //raylib's blending mode
 
             Vector2 topLeft = GetScreenToWorld2D({0, 0}, gameData.camera);
             Vector2 bottomRight = GetScreenToWorld2D({(float) GetScreenWidth(), (float) GetScreenHeight()},
@@ -635,14 +674,14 @@ bool updateGame() {
                     }
                 }
             }
-            // Light starts fading in at Y=40, and reaches max power at Y=100
+            //The light starts fading in at y 40, and reaches max power at y 125
             float lightStartY = 40.0f;
-            float lightMaxY = 100.0f;
+            float lightMaxY = 125.0f;
             float lightIntensity = 0.0f;
 
             if (playerY > lightStartY) {
                 lightIntensity = (playerY - lightStartY) / (lightMaxY - lightStartY);
-                if (lightIntensity > 1.0f) lightIntensity = 1.0f;
+                if (lightIntensity > 0.8f) lightIntensity = 0.8f;
             }
 
             unsigned char finalAlpha = (unsigned char) (150.0f * lightIntensity);
@@ -650,8 +689,8 @@ bool updateGame() {
             if (finalAlpha > 0) {
                 Vector2 screenPlayerPos = GetWorldToScreen2D(gameData.player.physics.transform.pos, gameData.camera);
 
-                Color lightColor = {255, 200, 200, finalAlpha};
-                float lightRadius = 350.0f;
+                Color lightColor = {255, 210, 210, finalAlpha};
+                float lightRadius = 400.0f;
 
                 DrawCircleGradient((int) screenPlayerPos.x, (int) screenPlayerPos.y, lightRadius, lightColor, BLANK);
             }
@@ -664,7 +703,9 @@ bool updateGame() {
 #pragma region HUD
     if (gameData.activeMap == &gameData.worldMap) {
         float buttonSize = 120; //small offset (instead of 128) because the button has round corners
-        int buttonIndex = 1;
+        int buttonIndex_tp = 1;
+        int buttonIndex_sound = 1;
+
         Rectangle tpButton = {
             4,
             (float) GetScreenHeight() - buttonSize - 4,
@@ -672,25 +713,72 @@ bool updateGame() {
             buttonSize,
         };
 
+        Rectangle soundButton = {
+            132,
+            (float) GetScreenHeight() - buttonSize - 4,
+            buttonSize,
+            buttonSize,
+        };
         Vector2 mousePos = GetMousePosition();
-        bool isHovered = CheckCollisionPointRec(mousePos, tpButton);
-        bool isHeldDown = isHovered && IsMouseButtonDown(MOUSE_BUTTON_LEFT);
-        bool isReleased = isHovered && IsMouseButtonReleased(MOUSE_BUTTON_LEFT);
+        bool isHovered_tp = CheckCollisionPointRec(mousePos, tpButton);
+        bool isHeldDown_tp = isHovered_tp && IsMouseButtonDown(MOUSE_BUTTON_LEFT);
+        bool isReleased_tp = isHovered_tp && IsMouseButtonReleased(MOUSE_BUTTON_LEFT);
 
-        if (!isHovered) buttonIndex = 1;
-        if (isHovered) buttonIndex = 2;
-        if (isHeldDown) buttonIndex = 3;
-        if (isReleased) {
-            tp_base();
+        bool isHovered_sound = CheckCollisionPointRec(mousePos, soundButton);
+        bool isHeldDown_sound = isHovered_sound && IsMouseButtonDown(MOUSE_BUTTON_LEFT);
+        bool isReleased_sound = isHovered_sound && IsMouseButtonReleased(MOUSE_BUTTON_LEFT);
+
+        if (!isHovered_tp) buttonIndex_tp = 1;
+        if (isHovered_tp) buttonIndex_tp = 2;
+        if (isHeldDown_tp) {
+            buttonIndex_tp = 3;
+            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) PlaySound(assetManager.uiOpen);
         }
+        if (isReleased_tp) {
+            tp_base();
+            PlaySound(assetManager.teleport);
+        }
+
+        if (!isHovered_sound) buttonIndex_sound = 4;
+        if (isHovered_sound) buttonIndex_sound = 5;
+        if (isHeldDown_sound) {
+            buttonIndex_sound = 6;
+            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) PlaySound(assetManager.uiOpen);
+        }
+        if (isReleased_sound) {
+            music_toggle = !music_toggle;
+            PlaySound(assetManager.uiClose);
+        }
+
         DrawTexturePro(
             assetManager.textures,
-            getTextureAtlas(buttonIndex, 3, TEXTURE_TILE_SIZE, TEXTURE_TILE_SIZE),
+            getTextureAtlas(buttonIndex_tp, 3, TEXTURE_TILE_SIZE, TEXTURE_TILE_SIZE),
             {0, (float) GetScreenHeight() - 128, 128, 128},
             {0, 0},
             0.f,
             WHITE
         );
+
+        DrawTexturePro(
+            assetManager.textures,
+            getTextureAtlas(buttonIndex_sound, 3, TEXTURE_TILE_SIZE, TEXTURE_TILE_SIZE),
+            {128, (float) GetScreenHeight() - 128, 128, 128},
+            {0, 0},
+            0.f,
+            WHITE
+        );
+
+        //Red X overlay over the music button
+        if (!music_toggle) {
+            DrawTexturePro(
+                assetManager.textures,
+                getTextureAtlas(7, 3, TEXTURE_TILE_SIZE, TEXTURE_TILE_SIZE),
+                {128, (float) GetScreenHeight() - 128, 128, 128},
+                {0, 0},
+                0.f,
+                WHITE
+            );
+        }
 
         int playerX = (int) floorf(gameData.player.physics.transform.pos.x);
         int playerY = (int) floorf(gameData.player.physics.transform.pos.y);
@@ -706,6 +794,19 @@ bool updateGame() {
             const char *layerText = "Deepslate";
             int layerWidth = MeasureText(layerText, 40);
             DrawText(layerText, GetScreenWidth() / 2 - layerWidth / 2, 55, 40, RAYWHITE);
+        }
+        if (playerY >= 200) {
+            const char *line1 = "Congratulations! You have reached the end of this demo.";
+            const char *line2 = "I hope you had fun playing this project :)";
+
+            int width1 = MeasureText(line1, 40);
+            int width2 = MeasureText(line2, 40);
+
+            int screenCenter = GetScreenWidth() / 2;
+            int startY = (GetScreenHeight() / 2) - 400;
+
+            DrawText(line1, screenCenter - (width1 / 2), startY, 40, YELLOW);
+            DrawText(line2, screenCenter - (width2 / 2), startY + 50, 40, YELLOW);
         }
     }
 
@@ -730,6 +831,9 @@ bool updateGame() {
             if (IsKeyPressed(KEY_E)) {
                 storage_toggle = !storage_toggle;
                 canMove = !canMove;
+
+                if (storage_toggle) PlaySound(assetManager.uiOpen);
+                else PlaySound(assetManager.uiClose);
             }
         } else if (px >= 17 && px <= 22) {
             if (!forge_toggle)
@@ -740,6 +844,9 @@ bool updateGame() {
             if (IsKeyPressed(KEY_E)) {
                 forge_toggle = !forge_toggle;
                 canMove = !canMove;
+
+                if (forge_toggle) PlaySound(assetManager.uiOpen);
+                else PlaySound(assetManager.uiClose);
             }
         } else if (px >= 25 && px <= 27) {
             if (!isSleeping) prompt = "Press [E] to sleep (reset mine)";
@@ -748,12 +855,14 @@ bool updateGame() {
                 sleepTimer = 0.0f;
                 worldResetTriggered = false;
                 canMove = false;
+                PlaySound(assetManager.sleep);
             }
         } else if (px >= 28 && px <= 29) {
             prompt = "Press [E] to exit the base";
 
             if (IsKeyPressed(KEY_E)) {
                 tp_mine();
+                PlaySound(assetManager.teleport);
             }
         }
 
@@ -773,19 +882,12 @@ bool updateGame() {
     if (isSleeping) {
         sleepTimer += dt;
 
-        // Trigger reset at 1.0s
         if (sleepTimer >= 1.0f && !worldResetTriggered) {
             worldResetTriggered = true;
 
             generateSeed(worldSeed);
             oracle.init(worldSeed);
             gameData.worldMap.mapData.clear();
-
-            // Highly recommended: reset mining progress so you don't
-            // instantly break the first block you look at when you wake up!
-            gameData.miningProgress = 0;
-            gameData.lastMinedX = -1;
-            gameData.lastMinedY = -1;
         }
 
         if (sleepTimer >= 2.5f) {
@@ -867,4 +969,8 @@ bool updateGame() {
 #pragma endregion
 
     return true;
+}
+
+void closeGame() {
+    assetManager.unloadAll();
 }

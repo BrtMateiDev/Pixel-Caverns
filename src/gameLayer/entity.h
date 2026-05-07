@@ -10,8 +10,7 @@ struct EntityHolder;
 
 enum EntityType {
     EntityType_Player = 0,
-    EntityType_Slime,
-    EntityType_DroppedItem,
+    //EntityType_DroppedItem,
 };
 
 struct EntityUpdateData {
@@ -46,7 +45,7 @@ struct Entity {
 
     virtual int getEntityType() = 0;
 
-    virtual float getMaxLife() = 0;
+    virtual float getMaxLife() = 0; //Placeholder that will be here for a while
 };
 
 #endif

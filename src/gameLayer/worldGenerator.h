@@ -23,7 +23,7 @@ struct OreRule {
     float getChanceAtDepth(int y) const {
         if (points.empty()) return 0.0f;
 
-        // Sort points by depth just in case they aren't
+        // Sorting points
         auto sortedPoints = points;
         std::sort(sortedPoints.begin(), sortedPoints.end(), [](const SpawnPoint &a, const SpawnPoint &b) {
             return a.depth < b.depth;
@@ -32,7 +32,7 @@ struct OreRule {
         if (y <= sortedPoints.front().depth) return sortedPoints.front().chance;
         if (y >= sortedPoints.back().depth) return sortedPoints.back().chance;
 
-        // Find the two points the current depth 'y' falls between
+        // Find the two points the current Y depth falls between
         for (size_t i = 0; i < sortedPoints.size() - 1; ++i) {
             const auto &p1 = sortedPoints[i];
             const auto &p2 = sortedPoints[i + 1];
@@ -130,19 +130,21 @@ public:
                     {
                         {6, 0.05f}, // 5% at the top of the layer
                         {60, 0.1f}, // Peaks at 10% at depth 60
-                        {100, 0.03f} //Faded back to 5%
+                        {100, 0.03f} //Fades back to 3% (continues to deepslate)
                     }
                 },
                 {
                     Block::iron,
                     {
+                        {6, 0},
                         {20, 0.005f}, // 0.5% starting from depth 20
-                        {100, 0.03f}, // Peaks at 3% at the bottom
+                        {100, 0.03f}, // Peaks at 3% at the bottom (continues to deepslate)
                     }
                 },
                 {
                     Block::silver,
                     {
+                        {6, 0},
                         {50, 0.001f},
                         {100, 0.003f},
                     }
@@ -163,15 +165,15 @@ public:
                     Block::iron,
                     {
                         {101, 0.003f},
-                        {200, 0.0001f}
+                        {200, 0.001f}
                     }
                 },
                 {
                     Block::silver,
                     {
-                        {101, 0.0003f},
+                        {101, 0.005f},
                         {120, 0.01f},
-                        {190, 0.003f}
+                        {190, 0.005f}
                     }
                 },
                 {
@@ -185,6 +187,7 @@ public:
                 {
                     Block::diamond,
                     {
+                        {101, 0},
                         {160, 0.001f},
                         {200, 0.005f}
                     }
